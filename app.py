@@ -39,12 +39,11 @@ def calculate_salary_breakdown(gross_salary):
     ta_da = basic * 0.10
     return basic, home_rent, medical, ta_da
 
-# --- PDF GENERATION FUNCTION (Returns Bytes) ---
-def generate_pdf_bytes(emp_data):
+# --- PDF GENERATION FUNCTION ---
+def generate_pdf_bytes(emp_data, selected_month):
     emp_id, name, designation, gross_salary = emp_data
     basic, home_rent, medical, ta_da = calculate_salary_breakdown(float(gross_salary))
     current_date = datetime.now().strftime("%d/%m/%Y")
-    current_month = datetime.now().strftime("%B, %Y")
     
     buffer = BytesIO()
     c = canvas.Canvas(buffer, pagesize=A5)
@@ -60,10 +59,10 @@ def generate_pdf_bytes(emp_data):
     c.setLineWidth(1)
     c.line(20, height - 90, width - 20, height - 90)
     
-    # Meta Info
+    # Meta Info (Using Selected Month Here)
     c.setFont("Helvetica-Bold", 10)
     c.drawString(20, height - 110, f"Date: {current_date}")
-    c.drawRightString(width - 20, height - 110, f"Month: {current_month}")
+    c.drawRightString(width - 20, height - 110, f"Month: {selected_month}")
     
     c.setFont("Helvetica", 10)
     c.drawString(20, height - 135, f"Employee ID : {emp_id}")
@@ -128,7 +127,6 @@ def generate_pdf_bytes(emp_data):
 st.title("💼 RECON LABORATORIES LTD - Payroll System")
 st.markdown("---")
 
-# Layout Column
 col1, col2 = st.columns([1, 2])
 
 # Left Side: Form to Add Employee
@@ -138,8 +136,6 @@ with col1:
         name = st.text_input("Employee Name")
         designation = st.text_input("Designation")
         salary = st.text_input("Total Salary (Tk)")
-        
-        # এখানে ভুলটি ঠিক করা হয়েছে (st.form_submit_button)
         submit_btn = st.form_submit_button("Add Employee")
         
         if submit_btn:
@@ -157,9 +153,9 @@ with col1:
                 except ValueError:
                     st.error("Salary সংখ্যা হতে হবে!")
 
-# Right Side: View Database & Actions
+# Right Side: View Database, Select Month & Actions
 with col2:
-    st.header("📋 Employee Database")
+    st.header("📋 Employee Database & Pay Slip")
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -168,18 +164,30 @@ with col2:
     conn.close()
     
     if rows:
-        # Create a dropdown to select an employee
+        # Month Selection Option
+        months_list = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+        current_m_idx = int(datetime.now().strftime("%m")) - 1
+        current_y = datetime.now().strftime("%Y")
+        
+        m_col, y_col = st.columns(2)
+        with m_col:
+            select_m = st.selectbox("Select Pay Slip Month", months_list, index=current_m_idx)
+        with y_col:
+            select_y = st.selectbox("Select Year", [str(y) for y in range(2024, 2031)], index=list(range(2024, 2031)).index(int(current_y)))
+            
+        full_selected_month = f"{select_m}, {select_y}"
+        
+        # Dropdown to select an employee
         emp_options = {f"ID: {r[0]} | {r[1]} ({r[2]})": r for r in rows}
-        selected_emp_key = st.selectbox("Select Employee for Pay Slip", list(emp_options.keys()))
+        selected_emp_key = st.selectbox("Select Employee", list(emp_options.keys()))
         selected_emp = emp_options[selected_emp_key]
         
         st.markdown("---")
-        st.subheader("📄 Pay Slip Preview")
+        st.subheader(f"📄 Pay Slip Preview ({full_selected_month})")
         
         # Breakdown Preview
         b, hr, m, td = calculate_salary_breakdown(selected_emp[3])
         
-        # Displaying inside Web Page
         p_col1, p_col2 = st.columns(2)
         with p_col1:
             st.write(f"**Employee Name:** {selected_emp[1]}")
@@ -191,14 +199,28 @@ with col2:
             st.write(f"**TA / DA:** Tk {td:,.2f}")
             st.write(f"### **Net Payable:** Tk {selected_emp[3]:,.2f}")
             
-        # PDF Download Button
-        pdf_bytes = generate_pdf_bytes(selected_emp)
-        st.download_button(
-            label="📥 Download Pay Slip (PDF)",
-            data=pdf_bytes,
-            file_name=f"PaySlip_{selected_emp[1].replace(' ', '_')}.pdf",
-            mime="application/pdf"
-        )
+        st.markdown("<br>", unsafe_with_html=True)
+        
+        # Action Buttons
+        pdf_bytes = generate_pdf_bytes(selected_emp, full_selected_month)
+        
+        act_col1, act_col2 = st.columns(2)
+        with act_col1:
+            # Download Button
+            st.download_button(
+                label="📥 Download Pay Slip (PDF)",
+                data=pdf_bytes,
+                file_name=f"PaySlip_{selected_emp[1].replace(' ', '_')}_{select_m}_{select_y}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+        with act_col2:
+            # Print Button (Opens PDF in browser tab where user can hit Ctrl+P or Print easily)
+            st.markdown(
+                f'<a href="data:application/pdf;base64,'
+                f'{BytesIO(pdf_bytes).read().hex()}" target="_blank">'
+                f'<button style="width:100%; height:38px; background-color:#ff4b4b; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">🖨️ Open & Print Pay Slip</button></a>',
+                unsafe_with_html=True
+            )
     else:
-        st.info("বর্তমানে কোনো কর্মচারী যুক্ত নেই। বাম পাশের ফর্ম থেকে কর্মচারী যুক্ত করুন।")
         st.info("বর্তমানে কোনো কর্মচারী যুক্ত নেই। বাম পাশের ফর্ম থেকে কর্মচারী যুক্ত করুন।")
