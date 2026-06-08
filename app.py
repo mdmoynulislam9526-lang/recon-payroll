@@ -138,7 +138,9 @@ with col1:
         name = st.text_input("Employee Name")
         designation = st.text_input("Designation")
         salary = st.text_input("Total Salary (Tk)")
-        submit_btn = st.form_submit_submit("Add Employee")
+        
+        # এখানে ভুলটি ঠিক করা হয়েছে (st.form_submit_button)
+        submit_btn = st.form_submit_button("Add Employee")
         
         if submit_btn:
             if name == "" or designation == "" or salary == "":
@@ -198,4 +200,5 @@ with col2:
             mime="application/pdf"
         )
     else:
+        st.info("বর্তমানে কোনো কর্মচারী যুক্ত নেই। বাম পাশের ফর্ম থেকে কর্মচারী যুক্ত করুন।")
         st.info("বর্তমানে কোনো কর্মচারী যুক্ত নেই। বাম পাশের ফর্ম থেকে কর্মচারী যুক্ত করুন।")
