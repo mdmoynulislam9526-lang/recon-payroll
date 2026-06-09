@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from PIL import Image
 from io import BytesIO
+import base64
 
 # ReportLab for PDF
 from reportlab.lib.pagesizes import A5
@@ -199,14 +200,17 @@ with col2:
             st.write(f"**TA / DA:** Tk {td:,.2f}")
             st.write(f"### **Net Payable:** Tk {selected_emp[3]:,.2f}")
             
-        st.markdown("<br>", unsafe_with_html=True)
+        # এখানে ভুলটি সংশোধন করা হয়েছে (unsafe_allow_html)
+        st.markdown("<br>", unsafe_allow_html=True)
         
         # Action Buttons
         pdf_bytes = generate_pdf_bytes(selected_emp, full_selected_month)
         
+        # Base64 encryption for download-less preview/print
+        b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+        
         act_col1, act_col2 = st.columns(2)
         with act_col1:
-            # Download Button
             st.download_button(
                 label="📥 Download Pay Slip (PDF)",
                 data=pdf_bytes,
@@ -215,12 +219,11 @@ with col2:
                 use_container_width=True
             )
         with act_col2:
-            # Print Button (Opens PDF in browser tab where user can hit Ctrl+P or Print easily)
+            # 100% Fixed Print Button Link
             st.markdown(
-                f'<a href="data:application/pdf;base64,'
-                f'{BytesIO(pdf_bytes).read().hex()}" target="_blank">'
+                f'<a href="data:application/pdf;base64,{b64_pdf}" target="_blank" style="text-decoration:none;">'
                 f'<button style="width:100%; height:38px; background-color:#ff4b4b; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">🖨️ Open & Print Pay Slip</button></a>',
-                unsafe_with_html=True
+                unsafe_allow_html=True
             )
     else:
         st.info("বর্তমানে কোনো কর্মচারী যুক্ত নেই। বাম পাশের ফর্ম থেকে কর্মচারী যুক্ত করুন।")
