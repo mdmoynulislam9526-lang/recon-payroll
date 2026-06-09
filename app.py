@@ -174,4 +174,49 @@ with col2:
         with m_col:
             select_m = st.selectbox("Select Pay Slip Month", months_list, index=current_m_idx)
         with y_col:
-            select_y = st.selectbox("Select Year",
+            select_y = st.selectbox("Select Year", [str(y) for y in range(2024, 2031)], index=list(range(2024, 2031)).index(int(current_y)))
+            
+        full_selected_month = f"{select_m}, {select_y}"
+        
+        emp_options = {f"ID: {r[0]} | {r[1]} ({r[2]})": r for r in rows}
+        selected_emp_key = st.selectbox("Select Employee", list(emp_options.keys()))
+        selected_emp = emp_options[selected_emp_key]
+        
+        st.markdown("---")
+        st.subheader(f"📄 Pay Slip Preview ({full_selected_month})")
+        
+        b, hr, m, td = calculate_salary_breakdown(selected_emp[3])
+        
+        p_col1, p_col2 = st.columns(2)
+        with p_col1:
+            st.write(f"**Employee Name:** {selected_emp[1]}")
+            st.write(f"**Designation:** {selected_emp[2]}")
+            st.write(f"**Basic Salary:** Tk {b:,.2f}")
+            st.write(f"**Home Rent (40%):** Tk {hr:,.2f}")
+        with p_col2:
+            st.write(f"**Medical Allowance:** Tk {m:,.2f}")
+            st.write(f"**TA / DA:** Tk {td:,.2f}")
+            st.write(f"### **Net Payable:** Tk {selected_emp[3]:,.2f}")
+            
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        pdf_bytes = generate_pdf_bytes(selected_emp, full_selected_month)
+        b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+        
+        act_col1, act_col2 = st.columns(2)
+        with act_col1:
+            st.download_button(
+                label="📥 Download Pay Slip (PDF)",
+                data=pdf_bytes,
+                file_name=f"PaySlip_{selected_emp[1].replace(' ', '_')}_{select_m}_{select_y}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+        with act_col2:
+            st.markdown(
+                f'<a href="data:application/pdf;base64,{b64_pdf}" target="_blank" style="text-decoration:none;">'
+                f'<button style="width:100%; height:38px; background-color:#ff4b4b; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">🖨️ Open & Print Pay Slip</button></a>',
+                unsafe_allow_html=True
+            )
+    else:
+        st.info("বর্তমানে কোনো কর্মচারী যুক্ত নেই। বাম পাশের ফর্ম থেকে কর্মচারী যুক্ত করুন।")
