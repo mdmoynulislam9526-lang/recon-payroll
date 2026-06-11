@@ -133,15 +133,16 @@ def generate_pdf_bytes(emp_data, selected_month, absent_days, fine_amount):
     c.drawRightString(width - 25, y_pos - 10, f"{net_payable:,.2f}")
     c.line(20, y_pos - 20, width - 20, y_pos - 20)
     
-    # --- নতুন পজিশন ফিক্স (অটোমেটিক পাশাপাশি বসার কোড) ---
+    # --- সিল ও সিগনেচারের পারফেক্ট রিয়েলস্টিক পজিশন ---
     sig_y = 50
-    # সিলটি থাকবে Authorized Sign লাইনের বাম পাশে
-    if os.path.exists("seal.png"):
-        c.drawImage("seal.png", width - 210, sig_y - 5, width=60, height=60, mask='auto')
     
-    # স্বাক্ষরটি থাকবে Authorized Sign লাইনের ঠিক ওপরে ডান পাশে
+    # সিলটি থাকবে ডান পাশেই, সিগনেচার এবং লাইনের ঠিক সাথে মিশে (বাস্তব সিলের মতো)
+    if os.path.exists("seal.png"):
+        c.drawImage("seal.png", width - 110, sig_y - 12, width=65, height=65, mask='auto')
+    
+    # স্বাক্ষরটি থাকবে সিলের ঠিক ওপরে ডান পাশে লাইনের ওপর
     if os.path.exists("signature.png"):
-        c.drawImage("signature.png", width - 125, sig_y + 12, width=85, height=32, mask='auto')
+        c.drawImage("signature.png", width - 120, sig_y + 12, width=85, height=32, mask='auto')
         
     c.line(width - 140, sig_y + 10, width - 20, sig_y + 10)
     c.setFont("Helvetica-Bold", 9)
