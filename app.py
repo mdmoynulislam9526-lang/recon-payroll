@@ -2,9 +2,8 @@ import streamlit as st
 import sqlite3
 import os
 from datetime import datetime
-from PIL import Image
-from io import BytesIO
 import base64
+from io import BytesIO
 
 # ReportLab for PDF
 from reportlab.lib.pagesizes import A5
@@ -13,13 +12,13 @@ from reportlab.pdfgen import canvas
 # Page configuration
 st.set_page_config(page_title="RECON Payroll System", layout="wide", page_icon="💼")
 
-# --- DATABASE SETUP ---
+# --- DATABASE SETUP (নতুন ডাটাবেজ নাম যাতে কোনো জ্যাম না থাকে) ---
 def init_db():
-    conn = sqlite3.connect("company_data.db", check_same_thread=False)
+    conn = sqlite3.connect("payroll_v2.db", check_same_thread=False)
     cursor = conn.cursor()
-    # Table updated with manual emp_id
+    # এখানে emp_id কে টেক্সট প্রাইমারি কি করা হয়েছে যা ম্যানুয়াল আইডি সাপোর্ট করবে
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS employees (
+        CREATE TABLE IF NOT EXISTS employees_new (
             emp_id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             designation TEXT NOT NULL,
@@ -29,10 +28,11 @@ def init_db():
     conn.commit()
     conn.close()
 
+# ডাটাবেজ ইনিশিয়ালাইজেশন
 init_db()
 
 def get_db_connection():
-    return sqlite3.connect("company_data.db", check_same_thread=False)
+    return sqlite3.connect("payroll_v2.db", check_same_thread=False)
 
 def calculate_salary_breakdown(gross_salary, absent_days, fine_amount):
     basic = gross_salary / 1.6
@@ -40,7 +40,7 @@ def calculate_salary_breakdown(gross_salary, absent_days, fine_amount):
     medical = basic * 0.10
     ta_da = basic * 0.10
     
-    # Deductions calculation
+    # অনুপস্থিতির কারণে বেতন কাটার হিসাব (Gross Salary / ৩০ দিন * অনুপস্থিত দিন)
     per_day_salary = gross_salary / 30
     absent_deduction = per_day_salary * absent_days
     total_deductions = absent_deduction + fine_amount
@@ -88,7 +88,7 @@ def generate_pdf_bytes(emp_data, selected_month, absent_days, fine_amount):
     c.drawString(25, height - 192, "Description")
     c.drawRightString(width - 25, height - 192, "Amount (Tk)")
     
-    # Table Content (Earnings)
+    # Table Content
     c.setFont("Helvetica", 10)
     y_pos = height - 225
     items = [
@@ -104,7 +104,7 @@ def generate_pdf_bytes(emp_data, selected_month, absent_days, fine_amount):
         c.drawRightString(width - 25, y_pos, f"{amt:,.2f}")
         y_pos -= 18
         
-    # Deductions Section in PDF
+    # Deductions Section
     c.line(20, y_pos + 5, width - 20, y_pos + 5)
     c.setFont("Helvetica-Bold", 10)
     c.drawString(25, y_pos - 5, "Deductions:")
@@ -126,7 +126,7 @@ def generate_pdf_bytes(emp_data, selected_month, absent_days, fine_amount):
     c.drawRightString(width - 25, y_pos - 10, f"{net_payable:,.2f}")
     c.line(20, y_pos - 20, width - 20, y_pos - 20)
     
-    # Seal & Signature
+    # Only One Seal & Signature at Bottom
     sig_y = 55
     if os.path.exists("seal.png"):
         c.drawImage("seal.png", width - 180, sig_y, width=65, height=65, mask='auto')
@@ -152,32 +152,31 @@ def generate_pdf_bytes(emp_data, selected_month, absent_days, fine_amount):
 st.title("💼 RECON LABORATORIES LTD - Payroll System")
 st.markdown("---")
 
-# UI Columns (Left, Middle, Right)
 col1, col2 = st.columns([1.2, 2])
 
 # --- LEFT SIDE: MANAGEMENT (ADD & REMOVE) ---
 with col1:
     st.header("➕ Add New Employee")
     with st.form("employee_form", clear_on_submit=True):
-        emp_id = st.text_input("Employee ID (e.g., RECON-01)")
+        input_id = st.text_input("Employee ID (e.g., RECON-01)")
         name = st.text_input("Employee Name")
         designation = st.text_input("Designation")
         salary = st.text_input("Gross Salary (Tk)")
         submit_btn = st.form_submit_button("Add Employee")
         
         if submit_btn:
-            if emp_id == "" or name == "" or designation == "" or salary == "":
+            if input_id == "" or name == "" or designation == "" or salary == "":
                 st.error("সব ঘর পূরণ করুন!")
             else:
                 try:
                     salary_val = float(salary)
                     conn = get_db_connection()
                     cursor = conn.cursor()
-                    cursor.execute("INSERT INTO employees (emp_id, name, designation, salary) VALUES (?, ?, ?, ?)", (emp_id, name, designation, salary_val))
+                    cursor.execute("INSERT INTO employees_new (emp_id, name, designation, salary) VALUES (?, ?, ?, ?)", (input_id, name, designation, salary_val))
                     conn.commit()
                     conn.close()
-                    st.success(f"ID: {emp_id} সফলভাবে যুক্ত হয়েছেন!")
-                    st.rerun()
+                    st.success(f"ID: {input_id} সফলভাবে যুক্ত হয়েছেন!")
+                    st.rarun() if hasattr(st, "rarun") else st.rerun()
                 except sqlite3.IntegrityError:
                     st.error("এই Employee IDটি ইতিমধ্যে ডাটাবেজে আছে!")
                 except ValueError:
@@ -187,7 +186,7 @@ with col1:
     st.header("❌ Remove Employee")
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT emp_id, name FROM employees")
+    cursor.execute("SELECT emp_id, name FROM employees_new")
     del_rows = cursor.fetchall()
     conn.close()
     
@@ -197,11 +196,11 @@ with col1:
         if st.button("Delete Employee", type="primary", use_container_width=True):
             conn = get_db_connection()
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM employees WHERE emp_id = ?", (del_options[selected_del_key],))
+            cursor.execute("DELETE FROM employees_new WHERE emp_id = ?", (del_options[selected_del_key],))
             conn.commit()
             conn.close()
-            st.success("কর্মচারী সফলভাবে ডাটাবেজ থেকে মুছে ফেলা হয়েছে!")
-            st.rerun()
+            st.success("कर्मचारी সফলভাবে ডাটাবেজ থেকে মুছে ফেলা হয়েছে!")
+            st.rarun() if hasattr(st, "rarun") else st.rerun()
     else:
         st.info("মুছে ফেলার মতো কোনো কর্মচারী নেই।")
 
@@ -211,7 +210,7 @@ with col2:
     
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM employees")
+    cursor.execute("SELECT * FROM employees_new")
     rows = cursor.fetchall()
     conn.close()
     
@@ -261,7 +260,7 @@ with col2:
             
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # PDF Generation with active parameters
+        # PDF Generation
         pdf_bytes = generate_pdf_bytes(selected_emp, full_selected_month, absent_days, fine_amount)
         b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
         
