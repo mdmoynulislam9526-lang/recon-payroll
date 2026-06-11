@@ -47,8 +47,8 @@ def calculate_salary_breakdown(gross_salary, absent_days, fine_amount):
     medical = basic * 0.10
     ta_da = basic * 0.10
     
-    # অনুপস্থিতির কারণে কেটে নেওয়া বেতন
-    per_day_salary = gross_salary / 30
+    # ২৬ দিনের হিসেবে অনুপস্থিতির কারণে কেটে নেওয়া বেতন (Fixed to 26 Days)
+    per_day_salary = gross_salary / 26
     absent_deduction = per_day_salary * absent_days
     total_deductions = absent_deduction + fine_amount
     net_payable = gross_salary - total_deductions
@@ -118,7 +118,7 @@ def generate_pdf_bytes(emp_data, selected_month, absent_days, fine_amount):
     y_pos -= 15
     
     c.setFont("Helvetica", 10)
-    c.drawString(25, y_pos, f"  - Absent Deduction ({absent_days} Days)")
+    c.drawString(25, y_pos, f"  - Absent Deduction ({absent_days} Days / 26)")
     c.drawRightString(width - 25, y_pos, f"- {absent_deduction:,.2f}")
     y_pos -= 15
     
@@ -238,29 +238,26 @@ with col2:
         selected_emp_key = st.selectbox("Select Employee for Pay Slip", list(emp_options.keys()))
         selected_emp = emp_options[selected_emp_key]
         
-        # ডাটা সেশন স্টেট সুরক্ষিত করার জন্য ফর্ম মেকানিজম ব্যবহার করা হয়েছে
         st.markdown("#### 🗓️ Attendance & Penalty Input")
         with st.form("calculation_form"):
             attn_col, fine_col = st.columns(2)
             with attn_col:
-                absent_days = st.number_input("Absent Days (অনুপস্থিত দিন)", min_value=0, max_value=31, value=0, step=1)
+                absent_days = st.number_input("Absent Days (অনুপস্থিত দিন)", min_value=0, max_value=26, value=0, step=1)
             with fine_col:
                 fine_amount = st.number_input("Fine / Penalty (জরিমানা টাকা)", min_value=0.0, value=0.0, step=10.0)
             
-            # ডেটা নিশ্চিতভাবে লক করার বাটন
             calc_btn = st.form_submit_button("🔄 Calculate (হিসাব করুন)", use_container_width=True)
             if calc_btn:
                 st.session_state['current_absent'] = absent_days
                 st.session_state['current_fine'] = fine_amount
 
-        # রিলোড হলেও ডেটা ধরে রাখার ব্যবস্থা
         final_absent = st.session_state.get('current_absent', 0)
         final_fine = st.session_state.get('current_fine', 0.0)
 
         st.markdown("---")
         st.subheader(f"📄 Pay Slip Preview ({full_selected_month})")
         
-        # লেটেস্ট লক করা ভ্যালু দিয়ে ক্যালকুলেশন
+        # ২৬ দিনের নতুন লজিক দিয়ে ক্যালকুলেশন
         b, hr, m, td, absent_deduction, net_payable = calculate_salary_breakdown(selected_emp[3], final_absent, final_fine)
         
         p_col1, p_col2 = st.columns(2)
@@ -270,13 +267,13 @@ with col2:
             st.write(f"**Designation:** {selected_emp[2]}")
             st.write(f"**Gross Structure:** Tk {selected_emp[3]:,.2f}")
         with p_col2:
-            st.write(f"**Absent Cut:** Tk {absent_deduction:,.2f}")
+            st.write(f"**Absent Cut (26 Days Basis):** Tk {absent_deduction:,.2f}")
             st.write(f"**Fine/Penalty:** Tk {final_fine:,.2f}")
             st.write(f"### **Net Payable:** Tk {net_payable:,.2f}")
             
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # পিডিএফ আপডেট
+        # পিডিএফ জেনারেশন
         pdf_bytes = generate_pdf_bytes(selected_emp, full_selected_month, final_absent, final_fine)
         b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
         
@@ -297,4 +294,4 @@ with col2:
                 unsafe_allow_html=True
             )
     else:
-        st.info("বর্তমানে কোনো কর্মচারী যুক্ত নেই।বাম পাশের ফর্ম থেকে কর্মচারী যুক্ত করুন।")
+        st.info("বর্তমানে কোনো কর্মচারী যুক্ত নেই। বাম পাশের ফর্ম থেকে কর্মচারী যুক্ত করুন।")
