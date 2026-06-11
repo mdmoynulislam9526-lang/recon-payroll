@@ -47,7 +47,7 @@ def calculate_salary_breakdown(gross_salary, absent_days, fine_amount):
     medical = basic * 0.10
     ta_da = basic * 0.10
     
-    # ২৬ দিনের হিসেবে অনুপস্থিতির কারণে কেটে নেওয়া বেতন (Fixed to 26 Days)
+    # ২৬ দিনের হিসেবে অনুপস্থিতির কারণে কেটে নেওয়া বেতন
     per_day_salary = gross_salary / 26
     absent_deduction = per_day_salary * absent_days
     total_deductions = absent_deduction + fine_amount
@@ -133,12 +133,15 @@ def generate_pdf_bytes(emp_data, selected_month, absent_days, fine_amount):
     c.drawRightString(width - 25, y_pos - 10, f"{net_payable:,.2f}")
     c.line(20, y_pos - 20, width - 20, y_pos - 20)
     
-    # Seal & Signature
-    sig_y = 55
+    # --- নতুন পজিশন ফিক্স (অটোমেটিক পাশাপাশি বসার কোড) ---
+    sig_y = 50
+    # সিলটি থাকবে Authorized Sign লাইনের বাম পাশে
     if os.path.exists("seal.png"):
-        c.drawImage("seal.png", width - 180, sig_y, width=65, height=65, mask='auto')
+        c.drawImage("seal.png", width - 210, sig_y - 5, width=60, height=60, mask='auto')
+    
+    # স্বাক্ষরটি থাকবে Authorized Sign লাইনের ঠিক ওপরে ডান পাশে
     if os.path.exists("signature.png"):
-        c.drawImage("signature.png", width - 130, sig_y + 15, width=90, height=35, mask='auto')
+        c.drawImage("signature.png", width - 125, sig_y + 12, width=85, height=32, mask='auto')
         
     c.line(width - 140, sig_y + 10, width - 20, sig_y + 10)
     c.setFont("Helvetica-Bold", 9)
@@ -257,7 +260,6 @@ with col2:
         st.markdown("---")
         st.subheader(f"📄 Pay Slip Preview ({full_selected_month})")
         
-        # ২৬ দিনের নতুন লজিক দিয়ে ক্যালকুলেশন
         b, hr, m, td, absent_deduction, net_payable = calculate_salary_breakdown(selected_emp[3], final_absent, final_fine)
         
         p_col1, p_col2 = st.columns(2)
@@ -273,7 +275,6 @@ with col2:
             
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # পিডিএফ জেনারেশন
         pdf_bytes = generate_pdf_bytes(selected_emp, full_selected_month, final_absent, final_fine)
         b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
         
