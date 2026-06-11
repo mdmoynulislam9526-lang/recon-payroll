@@ -12,11 +12,10 @@ from reportlab.pdfgen import canvas
 # Page configuration
 st.set_page_config(page_title="RECON Payroll System", layout="wide", page_icon="💼")
 
-# --- DATABASE SETUP (নতুন ডাটাবেজ নাম যাতে কোনো জ্যাম না থাকে) ---
+# --- DATABASE SETUP ---
 def init_db():
     conn = sqlite3.connect("payroll_v2.db", check_same_thread=False)
     cursor = conn.cursor()
-    # এখানে emp_id কে টেক্সট প্রাইমারি কি করা হয়েছে যা ম্যানুয়াল আইডি সাপোর্ট করবে
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS employees_new (
             emp_id TEXT PRIMARY KEY,
@@ -28,19 +27,28 @@ def init_db():
     conn.commit()
     conn.close()
 
-# ডাটাবেজ ইনিশিয়ালাইজেশন
 init_db()
 
 def get_db_connection():
     return sqlite3.connect("payroll_v2.db", check_same_thread=False)
 
+# ক্যালকুলেশন লজিক আরও নিখুঁত ও সুরক্ষিত করা হয়েছে
 def calculate_salary_breakdown(gross_salary, absent_days, fine_amount):
+    try:
+        gross_salary = float(gross_salary)
+        absent_days = int(absent_days)
+        fine_amount = float(fine_amount)
+    except ValueError:
+        gross_salary = 0.0
+        absent_days = 0
+        fine_amount = 0.0
+
     basic = gross_salary / 1.6
     home_rent = basic * 0.40
     medical = basic * 0.10
     ta_da = basic * 0.10
     
-    # অনুপস্থিতির কারণে বেতন কাটার হিসাব (Gross Salary / ৩০ দিন * অনুপস্থিত দিন)
+    # অনুপস্থিতির কারণে বেতন কাটার একদম সঠিক হিসাব
     per_day_salary = gross_salary / 30
     absent_deduction = per_day_salary * absent_days
     total_deductions = absent_deduction + fine_amount
@@ -51,7 +59,7 @@ def calculate_salary_breakdown(gross_salary, absent_days, fine_amount):
 # --- PDF GENERATION FUNCTION ---
 def generate_pdf_bytes(emp_data, selected_month, absent_days, fine_amount):
     emp_id, name, designation, gross_salary = emp_data
-    basic, home_rent, medical, ta_da, absent_deduction, net_payable = calculate_salary_breakdown(float(gross_salary), absent_days, fine_amount)
+    basic, home_rent, medical, ta_da, absent_deduction, net_payable = calculate_salary_breakdown(gross_salary, absent_days, fine_amount)
     current_date = datetime.now().strftime("%d/%m/%Y")
     
     buffer = BytesIO()
@@ -126,7 +134,7 @@ def generate_pdf_bytes(emp_data, selected_month, absent_days, fine_amount):
     c.drawRightString(width - 25, y_pos - 10, f"{net_payable:,.2f}")
     c.line(20, y_pos - 20, width - 20, y_pos - 20)
     
-    # Only One Seal & Signature at Bottom
+    # Seal & Signature
     sig_y = 55
     if os.path.exists("seal.png"):
         c.drawImage("seal.png", width - 180, sig_y, width=65, height=65, mask='auto')
@@ -176,7 +184,7 @@ with col1:
                     conn.commit()
                     conn.close()
                     st.success(f"ID: {input_id} সফলভাবে যুক্ত হয়েছেন!")
-                    st.rarun() if hasattr(st, "rarun") else st.rerun()
+                    st.rerun()
                 except sqlite3.IntegrityError:
                     st.error("এই Employee IDটি ইতিমধ্যে ডাটাবেজে আছে!")
                 except ValueError:
@@ -200,7 +208,7 @@ with col1:
             conn.commit()
             conn.close()
             st.success("कर्मचारी সফলভাবে ডাটাবেজ থেকে মুছে ফেলা হয়েছে!")
-            st.rarun() if hasattr(st, "rarun") else st.rerun()
+            st.rerun()
     else:
         st.info("মুছে ফেলার মতো কোনো কর্মচারী নেই।")
 
@@ -215,7 +223,6 @@ with col2:
     conn.close()
     
     if rows:
-        # Month & Year Selection
         months_list = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
         current_m_idx = int(datetime.now().strftime("%m")) - 1
         current_y = datetime.now().strftime("%Y")
@@ -228,23 +235,22 @@ with col2:
             
         full_selected_month = f"{select_m}, {select_y}"
         
-        # Dropdown to select an employee
         emp_options = {f"ID: {r[0]} | {r[1]}": r for r in rows}
         selected_emp_key = st.selectbox("Select Employee for Pay Slip", list(emp_options.keys()))
         selected_emp = emp_options[selected_emp_key]
         
-        # Attendance & Fine Inputs
+        # গুরুত্বপূর্ণ ফিক্স: ইনপুট বক্সে 'key' ব্যবহার করা হয়েছে যাতে ডেটা হারিয়ে না যায়
         st.markdown("#### 🗓️ Attendance & Penalty Input")
         attn_col, fine_col = st.columns(2)
         with attn_col:
-            absent_days = st.number_input("Absent Days (অনুপস্থিত দিন)", min_value=0, max_value=31, value=0, step=1)
+            absent_days = st.number_input("Absent Days (অনুপস্থিত দিন)", min_value=0, max_value=31, value=0, step=1, key="absent_input")
         with fine_col:
-            fine_amount = st.number_input("Fine / Penalty (জরিমানা টাকা)", min_value=0.0, value=0.0, step=10.0)
+            fine_amount = st.number_input("Fine / Penalty (জরিমানা টাকা)", min_value=0.0, value=0.0, step=10.0, key="fine_input")
         
         st.markdown("---")
         st.subheader(f"📄 Pay Slip Preview ({full_selected_month})")
         
-        # Calculations
+        # নতুন লাইভ ভ্যালু দিয়ে ক্যালকুলেশন
         b, hr, m, td, absent_deduction, net_payable = calculate_salary_breakdown(selected_emp[3], absent_days, fine_amount)
         
         p_col1, p_col2 = st.columns(2)
@@ -260,7 +266,7 @@ with col2:
             
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # PDF Generation
+        # পিডিএফ জেনারেট করার সময় একদম লেটেস্ট ভ্যালু পুশ করা হচ্ছে
         pdf_bytes = generate_pdf_bytes(selected_emp, full_selected_month, absent_days, fine_amount)
         b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
         
@@ -271,7 +277,8 @@ with col2:
                 data=pdf_bytes,
                 file_name=f"PaySlip_{selected_emp[0]}_{select_m}.pdf",
                 mime="application/pdf",
-                use_container_width=True
+                use_container_width=True,
+                key="btn_download"
             )
         with act_col2:
             st.markdown(
