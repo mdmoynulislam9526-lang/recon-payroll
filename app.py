@@ -2,20 +2,29 @@ import streamlit as st
 import sqlite3
 from datetime import datetime
 import calendar
-import base64
 from io import BytesIO
 import pandas as pd
 from calculations import calculate_salary_breakdown, generate_pdf_bytes
 
 st.set_page_config(page_title="RECON Payroll System", layout="wide", page_icon="💼")
 
+# --- DATABASE INITIALIZATION ---
 def init_db():
     conn = sqlite3.connect("payroll_v5.db", check_same_thread=False)
     cursor = conn.cursor()
+    # মূল কর্মচারী টেবিল
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS employees_final_version (
             emp_id TEXT PRIMARY KEY, name TEXT NOT NULL, designation TEXT NOT NULL,
             category TEXT NOT NULL, department TEXT NOT NULL, salary REAL NOT NULL
+        )
+    """)
+    # 🆕 স্থায়ীভাবে হাজিরা ও বোনাস রেকর্ড সেভ করার জন্য নতুন টেবিল
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS monthly_attendance_records (
+            month_year TEXT, emp_id TEXT, present_days INTEGER, absent_days INTEGER, 
+            fine_amount REAL, overtime_hours REAL, overtime_rate REAL, bonus_amount REAL, advance_cut REAL,
+            PRIMARY KEY (month_year, emp_id)
         )
     """)
     conn.commit()
@@ -26,7 +35,7 @@ init_db()
 def get_db_connection():
     return sqlite3.connect("payroll_v5.db", check_same_thread=False)
 
-st.title("💼 RECON LABORATORIES LTD - Professional Payroll System")
+st.title("💼 RECON LABORATORIES LTD - Advanced Payroll Management System")
 st.markdown("---")
 
 col1, col2 = st.columns([1, 2.3])
@@ -34,7 +43,6 @@ col1, col2 = st.columns([1, 2.3])
 # --- LEFT SIDE: ADD EMPLOYEE ---
 with col1:
     st.header("➕ Add New Person")
-    
     if "form_id" not in st.session_state: st.session_state.form_id = ""
     if "form_name" not in st.session_state: st.session_state.form_name = ""
     if "form_desg" not in st.session_state: st.session_state.form_desg = ""
@@ -62,17 +70,11 @@ with col1:
                     conn.commit()
                     conn.close()
                     st.success(f"{name} successfully added!")
-                    st.session_state.form_id = ""
-                    st.session_state.form_name = ""
-                    st.session_state.form_desg = ""
-                    st.session_state.form_salary = ""
+                    st.session_state.form_id, st.session_state.form_name, st.session_state.form_desg, st.session_state.form_salary = "", "", "", ""
                     st.rerun()
                 except sqlite3.IntegrityError:
-                    st.session_state.form_id = input_id
-                    st.session_state.form_name = name
-                    st.session_state.form_desg = designation
-                    st.session_state.form_salary = salary
-                    st.error(f"⚠️ Warning: Employee ID '{input_id}' already exists! Please change the ID. Your typed data is safe.")
+                    st.session_state.form_id, st.session_state.form_name, st.session_state.form_desg, st.session_state.form_salary = input_id, name, designation, salary
+                    st.error(f"⚠️ Warning: Employee ID '{input_id}' already exists!")
                 except ValueError: 
                     st.error("Salary must be a number!")
 
@@ -92,7 +94,6 @@ def render_inline_management(r, prefix=""):
 
         if st.session_state.get(f"emode_{prefix}_{eid}", False):
             with st.form(key=f"form_{prefix}_{eid}"):
-                st.markdown(f"##### 📝 Editing: {ename} ({eid})")
                 ch_name = st.text_input("Edit Name", value=ename)
                 dept_list = ["Production", "Quality Control", "Development", "Maintenance", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"]
                 ch_dept = st.selectbox("Edit Department", dept_list, index=dept_list.index(edept) if edept in dept_list else 0)
@@ -104,222 +105,182 @@ def render_inline_management(r, prefix=""):
                 b1, b2 = st.columns(2)
                 with b1:
                     if st.form_submit_button("Save Changes", use_container_width=True):
-                        try:
-                            conn = get_db_connection()
-                            conn.cursor().execute("UPDATE employees_final_version SET name=?, designation=?, category=?, department=?, salary=? WHERE emp_id=?", (ch_name, ch_desg, ch_cat, ch_dept, float(ch_salary), eid))
-                            conn.commit()
-                            conn.close()
-                            st.session_state[f"emode_{prefix}_{eid}"] = False
-                            st.success("Updated successfully!")
-                            st.rerun()
-                        except ValueError: st.error("Salary must be a number!")
+                        conn = get_db_connection()
+                        conn.cursor().execute("UPDATE employees_final_version SET name=?, designation=?, category=?, department=?, salary=? WHERE emp_id=?", (ch_name, ch_desg, ch_cat, ch_dept, float(ch_salary), eid))
+                        conn.commit()
+                        conn.close()
+                        st.session_state[f"emode_{prefix}_{eid}"] = False
+                        st.success("Updated!")
+                        st.rerun()
                 with b2:
                     if st.form_submit_button("Cancel", use_container_width=True):
                         st.session_state[f"emode_{prefix}_{eid}"] = False
                         st.rerun()
 
         if st.session_state.get(f"dmode_{prefix}_{eid}", False):
-            st.warning(f"Are you sure you want to completely remove **{ename} ({eid})**?")
+            st.warning(f"Remove **{ename} ({eid})**?")
             dc1, dc2 = st.columns(2)
             with dc1:
-                if st.button("Yes, Confirm Delete", key=f"c_del_{prefix}_{eid}", type="primary", use_container_width=True):
+                if st.button("Yes, Delete", key=f"c_del_{prefix}_{eid}", type="primary", use_container_width=True):
                     conn = get_db_connection()
                     conn.cursor().execute("DELETE FROM employees_final_version WHERE emp_id = ?", (eid,))
+                    conn.cursor().execute("DELETE FROM monthly_attendance_records WHERE emp_id = ?", (eid,))
                     conn.commit()
                     conn.close()
                     st.session_state[f"dmode_{prefix}_{eid}"] = False
-                    st.success("Employee removed successfully!")
                     st.rerun()
             with dc2:
-                if st.button("Cancel Delete", key=f"c_can_{prefix}_{eid}", use_container_width=True):
+                if st.button("Cancel", key=f"c_can_{prefix}_{eid}", use_container_width=True):
                     st.session_state[f"dmode_{prefix}_{eid}"] = False
                     st.rerun()
         st.markdown("<hr style='margin:4px 0px; border-color:#eee;'>", unsafe_allow_html=True)
 
-
-# --- RIGHT SIDE: ALL MANAGEMENT, SEARCH & PAYROLL ---
+# --- RIGHT SIDE: PAYROLL MANAGEMENT ---
 with col2:
-    st.header("📋 Payroll Calculation & Reports")
     conn = get_db_connection()
     rows = conn.cursor().execute("SELECT * FROM employees_final_version").fetchall()
     conn.close()
     
     if rows:
         months_list = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-        select_m = st.selectbox("Select Month", months_list, index=int(datetime.now().strftime("%m")) - 1)
-        select_y = st.selectbox("Select Year", [str(y) for y in range(2024, 2031)], index=2)
+        c_col1, c_col2 = st.columns(2)
+        with c_col1: select_m = st.selectbox("Select Month", months_list, index=int(datetime.now().strftime("%m")) - 1)
+        with c_col2: select_y = st.selectbox("Select Year", [str(y) for y in range(2024, 2031)], index=2)
         full_month = f"{select_m}, {select_y}"
         
-        # ক্যালেন্ডার মাসের দিন সংখ্যা বের করা
         month_num = months_list.index(select_m) + 1
         days_in_month = calendar.monthrange(int(select_y), month_num)[1]
         
-        tab_emp, tab0, tab1, tab2 = st.tabs(["👥 All Employees", "🔍 Search Employee", "📄 Individual Pay Slip", "📊 Categorized Attendance Entry"])
+        # 🆕 ডাটাবেজ থেকে এই নির্দিষ্ট মাসের হাজিরা লোড করা
+        conn = get_db_connection()
+        db_records = conn.cursor().execute("SELECT * FROM monthly_attendance_records WHERE month_year=?", (full_month,)).fetchall()
+        conn.close()
         
-        # TAB 1: ALL EMPLOYEES
+        saved_db_tracker = {r[1]: {"present": r[2], "absent": r[3], "fine": r[4], "ot_hrs": r[5], "ot_rate": r[6], "bonus": r[7], "advance": r[8]} for r in db_records}
+
+        # 🆕 ১. লাইভ ড্যাশবোর্ড সামারি ক্যালকুলেশন
+        total_payout, total_fine, total_bonus, total_advance = 0.0, 0.0, 0.0, 0.0
+        for r in rows:
+            eid, _, _, cat, _, base_sal = r
+            rec = saved_db_tracker.get(eid, {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
+            
+            calc_salary = base_sal
+            if cat != 'Worker (Daily Basis)' and rec['present'] < 26:
+                calc_salary = (base_sal / 26) * rec['present']
+                
+            _, _, _, _, ab_cut, net_p, _ = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], cat, rec['present'])
+            # টোটাল পেআউটের সাথে বোনাস এবং ওভারটাইম যোগ করা ও অগ্রিম বিয়োগ করা
+            net_final = net_p + (rec['ot_hrs'] * rec['ot_rate']) + rec['bonus'] - rec['advance']
+            total_payout += net_final
+            total_fine += rec['fine'] + ab_cut
+            total_bonus += rec['bonus']
+            total_advance += rec['advance']
+
+        # ড্যাশবোর্ড ডিসপ্লে
+        st.markdown("### 📊 Financial Dashboard Summary")
+        m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+        m_col1.metric("Total Employees", len(rows))
+        m_col2.metric("Total Payout (Tk)", f"{total_payout:,.2f}")
+        m_col3.metric("Total Deductions (Fine+Absent)", f"{total_fine:,.2f}")
+        m_col4.metric("Total Bonuses Distributed", f"{total_bonus:,.2f}")
+        st.markdown("---")
+
+        tab_emp, tab0, tab1, tab2 = st.tabs(["👥 All Employees", "🔍 Search Employee", "📄 Individual Pay Slip", "📊 Attendance & Payroll Processor"])
+        
         with tab_emp:
-            st.markdown("### 👥 Manage Employees (By Category)")
-            categories_map = {
-                "💼 Managers": "Manager",
-                "👔 Officers": "Officer",
-                "🛠️ Workers (Permanent)": "Worker (Permanent)",
-                "📆 Workers (Daily Basis)": "Worker (Daily Basis)"
-            }
+            categories_map = {"💼 Managers": "Manager", "👔 Officers": "Officer", "🛠️ Workers (Permanent)": "Worker (Permanent)", "📆 Workers (Daily Basis)": "Worker (Daily Basis)"}
             for title, cat_value in categories_map.items():
                 cat_members = [r for r in rows if r[3] == cat_value]
-                with st.expander(f"{title} ({len(cat_members)})", expanded=True):
-                    if not cat_members: st.info(f"No employees registered under {cat_value}.")
+                with st.expander(f"{title} ({len(cat_members)})", expanded=False):
+                    if not cat_members: st.info("No records.")
                     else:
                         for r in cat_members: render_inline_management(r, prefix="all_tab")
 
-        # TAB 2: SEARCH FEATURE
         with tab0:
-            st.markdown("### 🔍 Live Search & Quick Action")
             search_query = st.text_input("Enter Employee ID or Name to search", placeholder="Type here...", key="search_tab_input")
             if search_query:
                 search_results = [r for r in rows if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()]
-                if search_results:
-                    st.success(f"Found {len(search_results)} result(s):")
-                    for emp in search_results:
-                        st.markdown(f"**Current Category:** *{emp[3]}*")
-                        render_inline_management(emp, prefix="search_tab")
-                else: st.error("No employee found with that ID or Name.")
-            else: st.info("Type an ID or Name above to instantly check details, edit or remove.")
+                for emp in search_results: render_inline_management(emp, prefix="search_tab")
 
-        # TAB 3: INDIVIDUAL PAY SLIP
         with tab1:
-            st.markdown("### 🔍 Search Employee for Pay Slip")
-            pay_search = st.text_input("Enter Employee ID or Name to generate pay slip", placeholder="e.g., RECON-01 or Satter", key="pay_slip_search_input")
-            
+            pay_search = st.text_input("Enter Employee ID or Name for Pay Slip", key="pay_slip_search_input")
             if pay_search:
                 pay_results = [r for r in rows if pay_search.lower() in r[0].lower() or pay_search.lower() in r[1].lower()]
-                
                 if pay_results:
-                    if len(pay_results) > 1:
-                        st.info(f"Multiple matches found ({len(pay_results)}). Please select the correct person below:")
-                        emp_options = {f"[{r[3]}] {r[0]} - {r[1]} ({r[2]})": r for r in pay_results}
-                        selected_emp = emp_options[st.selectbox("Select Person", list(emp_options.keys()), key="pay_slip_multiple_select")]
-                    else:
-                        selected_emp = pay_results[0]
-                        st.success(f"Selected: **{selected_emp[1]} ({selected_emp[0]})** — *{selected_emp[3]}*")
+                    selected_emp = pay_results[0]
+                    rec = saved_db_tracker.get(selected_emp[0], {"present": days_in_month if selected_emp[3] == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
                     
-                    with st.form("calculation_form_search"):
-                        st.markdown(f"##### Calculate Pay Slip for **{selected_emp[1]}** ({full_month})")
-                        
-                        c1, c2 = st.columns(2)
-                        with c1:
-                            if selected_emp[3] == 'Worker (Daily Basis)':
-                                p_days = st.number_input("Total Present Days", 0, days_in_month, days_in_month, key="ind_p_search")
-                                a_days = 0
-                            else:
-                                p_days = st.number_input("Total Present/Duty Days (Base)", 0, 26, 26, key="ind_p_search_fixed")
-                                a_days = st.number_input("Absent Days", 0, 26, 0, key="ind_a_search")
-                        with c2: 
-                            f_amt = st.number_input("Fine / Penalty (Tk)", 0.0, value=0.0, step=10.0, key="ind_f_search")
-                        
-                        if st.form_submit_button("🔄 Calculate Slip", use_container_width=True):
-                            st.session_state['s_abs'], st.session_state['s_pres'], st.session_state['s_fine'] = a_days, p_days, f_amt
+                    st.success(f"Selected: {selected_emp[1]} ({selected_emp[0]})")
+                    
+                    calc_salary = selected_emp[5]
+                    if selected_emp[3] != 'Worker (Daily Basis)' and rec['present'] < 26:
+                        calc_salary = (selected_emp[5] / 26) * rec['present']
 
-                    sa = st.session_state.get('s_abs', 0)
-                    sp = st.session_state.get('s_pres', days_in_month if selected_emp[3] == 'Worker (Daily Basis)' else 26)
-                    sf = st.session_state.get('s_fine', 0.0)
+                    _, _, _, _, ab_cut, net_p, _ = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], selected_emp[3], rec['present'])
+                    net_final = net_p + (rec['ot_hrs'] * rec['ot_rate']) + rec['bonus'] - rec['advance']
                     
-                    current_salary = selected_emp[5]
-                    if selected_emp[3] != 'Worker (Daily Basis)' and sp < 26:
-                        current_salary = (selected_emp[5] / 26) * sp
-
-                    _, _, _, _, _, net_payable, _ = calculate_salary_breakdown(current_salary, sa, sf, selected_emp[3], sp)
-                    
-                    st.markdown(f"#### **Net Payable Amount:** Tk {net_payable:,.2f}")
+                    st.markdown(f"#### **Net Payable Salary:** Tk {net_final:,.2f} *(OT: {rec['ot_hrs']} Hrs, Bonus: Tk {rec['bonus']}, Advance Cut: Tk {rec['advance']})*")
                     
                     pdf_buf = BytesIO()
-                    generate_pdf_bytes((selected_emp[0], selected_emp[1], selected_emp[2], selected_emp[3], selected_emp[4], current_salary), full_month, sa, sf, sp, pdf_buf)
-                    pdf_bytes = pdf_buf.getvalue()
-                    st.download_button(
-                        "📥 Download Pay Slip (PDF)", 
-                        data=pdf_bytes, 
-                        file_name=f"PaySlip_{selected_emp[0]}_{select_m}.pdf", 
-                        mime="application/pdf", 
-                        use_container_width=True,
-                        type="primary"
-                    )
-                else: st.error("No employee found matching your input.")
-            else: st.info("Type an Employee ID or Name above to quickly load their details and download the PDF pay slip.")
+                    # পিডিএফ এ ফাইনাল অ্যামাউন্ট সামঞ্জস্য করার জন্য স্যালারি মডিফাই করে পাঠানো
+                    generate_pdf_bytes((selected_emp[0], selected_emp[1], selected_emp[2], selected_emp[3], selected_emp[4], calc_salary + (rec['ot_hrs'] * rec['ot_rate']) + rec['bonus'] - rec['advance']), full_month, rec['absent'], rec['fine'], rec['present'], pdf_buf)
+                    st.download_button("📥 Download Pay Slip (PDF)", data=pdf_buf.getvalue(), file_name=f"PaySlip_{selected_emp[0]}_{select_m}.pdf", mime="application/pdf", use_container_width=True)
 
-        # TAB 4: 🆕 লাইভ সার্চ ভিত্তিক হাজিরা ইনপুট ফর্ম (ক্যাটাগরি ওয়াইজ)
+        # TAB 4: 🆕 সম্পূর্ণ নতুন অ্যাডভান্সড লাইভ সার্চ এবং ডাটাবেজ সেভিং সিস্টেম
         with tab2:
-            st.markdown(f"### 📋 Attendance & Salary Processor ({full_month})")
-            
-            view_cat = st.selectbox("Select Category", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
+            view_cat = st.selectbox("Select Category to Process", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
             filtered_rows = [r for r in rows if r[3] == view_cat]
             
-            st.markdown("---")
-            # 🆕 এখানে সার্চ ইনপুট বক্স যোগ করা হলো
-            search_emp_input = st.text_input(f"🔍 Search Employee within **{view_cat}**", placeholder="Type Name or ID to filter...", key=f"search_box_{view_cat}")
-            
-            # সার্চের ওপর ভিত্তি করে লিস্ট ফিল্টার করা হচ্ছে
-            if search_emp_input:
-                final_display_rows = [r for r in filtered_rows if search_emp_input.lower() in r[0].lower() or search_emp_input.lower() in r[1].lower()]
-            else:
-                final_display_rows = filtered_rows
+            search_emp_input = st.text_input(f"🔍 Search Person within {view_cat}", placeholder="Type Name/ID...", key=f"s_{view_cat}")
+            final_display_rows = [r for r in filtered_rows if search_emp_input.lower() in r[0].lower() or search_emp_input.lower() in r[1].lower()] if search_emp_input else filtered_rows
 
             sheet_data = []
-            
-            if 'attendance_tracker' not in st.session_state: 
-                st.session_state['attendance_tracker'] = {}
-                
-            if not final_display_rows:
-                if search_emp_input:
-                    st.warning("No employees match your search query in this category.")
-                else:
-                    st.warning(f"No employees found registered under '{view_cat}'.")
-            else:
-                # ফর্মের মাধ্যমে ডাটা সাবমিট করা
-                with st.form("bulk_sheet_form_v2"):
-                    st.markdown(f"##### 📝 Filling Attendance for {len(final_display_rows)} Person(s)")
-                    
+            if final_display_rows:
+                with st.form("bulk_sheet_form_v3"):
+                    st.markdown(f"##### 📝 Editing Attendance & Financials for {len(final_display_rows)} Person(s)")
                     for r in final_display_rows:
-                        st.markdown(f"**🔹 [{r[4]}] {r[0]} - {r[1]}** ({r[2]})")
-                        col_in1, col_in2 = st.columns(2)
+                        st.markdown(f"**🔹 {r[0]} - {r[1]}** ({r[2]})")
                         
-                        # সেশন স্টেট থেকে আগের ডাটা থাকলে তা তুলে আনা, না থাকলে ডিফল্ট সেট করা
-                        saved_attendance = st.session_state['attendance_tracker'].get(r[0], None)
+                        # ডাটাবেজ থেকে তথ্য নেওয়া (আগে সেভ করা থাকলে অটো লোড হবে)
+                        rec = saved_db_tracker.get(r[0], {"present": days_in_month if r[3] == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
                         
-                        if r[3] == 'Worker (Daily Basis)':
-                            def_p = saved_attendance['present'] if saved_attendance else days_in_month
-                            def_a = 0
-                        else:
-                            def_p = saved_attendance['present'] if saved_attendance else 26
-                            def_a = saved_attendance['absent'] if saved_attendance else 0
-                        def_f = saved_attendance['fine'] if saved_attendance else 0.0
-                        
+                        col_in1, col_in2, col_in3 = st.columns(3)
                         with col_in1:
                             if r[3] == 'Worker (Daily Basis)':
-                                p_d = st.number_input(f"Present Days", 0, days_in_month, def_p, key=f"p_{r[0]}")
+                                p_d = st.number_input("Present Days", 0, days_in_month, int(rec['present']), key=f"p_{r[0]}")
                                 a_d = 0
                             else:
-                                p_d = st.number_input(f"Present/Duty Days", 0, 26, def_p, key=f"p_{r[0]}")
-                                a_d = st.number_input(f"Absent Days", 0, 26, def_a, key=f"a_{r[0]}")
-                        with col_in2: 
-                            f_d = st.number_input(f"Penalty/Fine (Tk)", 0.0, value=float(def_f), key=f"f_{r[0]}")
-                            
-                        sheet_data.append({'emp_data': r, 'absent_days': a_d, 'present_days': p_d, 'fine_amount': f_d})
+                                p_d = st.number_input("Duty Days (Base)", 0, 26, int(rec['present']), key=f"p_{r[0]}")
+                                a_d = st.number_input("Absent Days", 0, 26, int(rec['absent']), key=f"a_{r[0]}")
+                            f_d = st.number_input("Penalty/Fine (Tk)", 0.0, value=float(rec['fine']), key=f"f_{r[0]}")
+                        
+                        with col_in2:
+                            ot_h = st.number_input("Overtime Hours", 0.0, 200.0, value=float(rec['ot_hrs']), key=f"oth_{r[0]}")
+                            ot_r = st.number_input("OT Rate per Hour (Tk)", 0.0, 1000.0, value=float(rec['ot_rate']), key=f"otr_{r[0]}")
+                        
+                        with col_in3:
+                            bonus_amt = st.number_input("Bonus Amount (Tk)", 0.0, 200000.0, value=float(rec['bonus']), key=f"bn_{r[0]}")
+                            adv_cut = st.number_input("Advance Salary Cut (Tk)", 0.0, 200000.0, value=float(rec['advance']), key=f"adv_{r[0]}")
+                        
+                        sheet_data.append({'eid': r[0], 'p': p_d, 'a': a_d, 'f': f_d, 'oth': ot_h, 'otr': ot_r, 'bonus': bonus_amt, 'adv': adv_cut})
+                        st.markdown("<hr style='margin:2px 0; border-color:#f0f0f0;'>", unsafe_allow_html=True)
                     
-                    submit_sheet = st.form_submit_button(f"💾 Save Entry", use_container_width=True, type="primary")
-                
-                if submit_sheet and sheet_data:
-                    for item in sheet_data:
-                        eid = item['emp_data'][0]
-                        st.session_state['attendance_tracker'][eid] = {'absent': item['absent_days'], 'present': item['present_days'], 'fine': item['fine_amount']}
-                    st.success("Attendance saved successfully! Check the overview table below.")
-                    st.rerun()
+                    if st.form_submit_button("💾 Save Entry to Database", use_container_width=True, type="primary"):
+                        conn = get_db_connection()
+                        for item in sheet_data:
+                            # ডাটাবেজে রেকর্ড রিপ্লেস/ইনসার্ট করা
+                            conn.cursor().execute("""
+                                INSERT OR REPLACE INTO monthly_attendance_records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """, (full_month, item['eid'], item['p'], item['a'], item['f'], item['oth'], item['otr'], item['bonus'], item['adv']))
+                        conn.commit()
+                        conn.close()
+                        st.success(f"Successfully saved records for {full_month} into system database permanent storage!")
+                        st.rerun()
 
-            st.markdown("---")
-            st.markdown("### 👁️ Current Month Attendance & Net Salary Overview (Separated Categories)")
-            
+            # --- SEPARATED CATEGORY OVERVIEW TABLE ---
+            st.markdown("### 👁️ Current Month Full Payroll Sheets Overview")
             categories_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
-            display_titles = ["💼 Managers", "👔 Officers", "🛠️ Workers - Permanent", f"📆 Workers - Daily Basis (Calendar {days_in_month} Days Base)"]
-            current_tracker = st.session_state.get('attendance_tracker', {})
+            display_titles = ["💼 Managers", "👔 Officers", "🛠️ Workers - Permanent", f"📆 Workers - Daily Basis ({days_in_month} Days Base)"]
             
             for cat_name, title_text in zip(categories_list, display_titles):
                 cat_rows = [r for r in rows if r[3] == cat_name]
@@ -327,63 +288,54 @@ with col2:
                 
                 for r in cat_rows:
                     eid, name, desg, cat, dept, base_sal = r
-                    
-                    if eid in current_tracker:
-                        saved_data = current_tracker[eid]
-                    else:
-                        if cat == 'Worker (Daily Basis)':
-                            saved_data = {'absent': 0, 'present': days_in_month, 'fine': 0.0} 
-                        else:
-                            saved_data = {'absent': 0, 'present': 26, 'fine': 0.0}
+                    rec = saved_db_tracker.get(eid, {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
                     
                     calc_salary = base_sal
-                    if cat != 'Worker (Daily Basis)' and saved_data['present'] < 26:
-                        calc_salary = (base_sal / 26) * saved_data['present']
+                    if cat != 'Worker (Daily Basis)' and rec['present'] < 26:
+                        calc_salary = (base_sal / 26) * rec['present']
 
-                    _, _, _, _, ab_cut, net_p, _ = calculate_salary_breakdown(
-                        calc_salary, saved_data['absent'], saved_data['fine'], cat, saved_data['present']
-                    )
+                    _, _, _, _, ab_cut, net_p, _ = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], cat, rec['present'])
+                    
+                    # নতুন বোনাস ও ওভারটাইম সমীকরণ যোগ এবং অগ্রিম বিয়োগ
+                    ot_total = rec['ot_hrs'] * rec['ot_rate']
+                    final_payable = net_p + ot_total + rec['bonus'] - rec['advance']
                     
                     tracker_table.append({
-                        "ID": eid, "Name": name, "Department": dept, "Designation": desg, "Base Salary/Rate": f"Tk {base_sal:,.2f}",
-                        "Present Days": saved_data['present'],
-                        "Absent Days": saved_data['absent'] if cat != 'Worker (Daily Basis)' else 0,
-                        "Absent Cut": f"Tk {ab_cut:,.2f}", "Fine/Penalty": f"Tk {saved_data['fine']:,.2f}",
-                        "Net Payable Salary": f"Tk {net_p:,.2f}"
+                        "ID": eid, "Name": name, "Designation": desg, "Base Salary/Rate": f"Tk {base_sal:,.2f}",
+                        "Duty/Present": rec['present'], "Absent Cut": f"Tk {ab_cut:,.2f}", "Fine": f"Tk {rec['fine']:,.2f}",
+                        "OT Earn": f"Tk {ot_total:,.2f}", "Bonus": f"Tk {rec['bonus']:,.2f}", "Advance Cut": f"Tk {rec['advance']:,.2f}",
+                        "Net Payable": f"Tk {final_payable:,.2f}"
                     })
-                
                 if tracker_table:
                     st.markdown(f"##### {title_text}")
                     st.dataframe(pd.DataFrame(tracker_table), use_container_width=True)
 
+            # --- EXCEL DOWNLOAD ---
             st.markdown("---")
-            st.markdown("##### 📥 Download Full Combined Excel Sheet (Separated by Tabs)")
             if st.button("🚀 Prepare & Download Full Excel Report", use_container_width=True):
                 ex_buf = BytesIO()
                 with pd.ExcelWriter(ex_buf, engine='openpyxl') as writer:
                     sheet_names = ["Managers", "Officers", "Workers_Permanent", "Workers_Daily"]
-                    
                     for cat_name, s_name in zip(categories_list, sheet_names):
                         cat_employees = [r for r in rows if r[3] == cat_name]
                         cat_table = []
                         for r in cat_employees:
-                            if r[0] in st.session_state.get('attendance_tracker', {}):
-                                saved_att = st.session_state['attendance_tracker'][r[0]]
-                            else:
-                                saved_att = {'absent': 0, 'present': days_in_month if r[3] == 'Worker (Daily Basis)' else 26, 'fine': 0.0}
-                                
+                            rec = saved_db_tracker.get(r[0], {"present": days_in_month if r[3] == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
                             calc_salary = r[5]
-                            if r[3] != 'Worker (Daily Basis)' and saved_att['present'] < 26:
-                                calc_salary = (r[5] / 26) * saved_att['present']
+                            if r[3] != 'Worker (Daily Basis)' and rec['present'] < 26:
+                                calc_salary = (r[5] / 26) * rec['present']
 
-                            _, _, _, _, ab_cut, net_p, total_earn = calculate_salary_breakdown(calc_salary, saved_att['absent'], saved_att['fine'], r[3], saved_att['present'])
+                            _, _, _, _, ab_cut, net_p, total_earn = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], r[3], rec['present'])
+                            ot_total = rec['ot_hrs'] * rec['ot_rate']
+                            final_payable = net_p + ot_total + rec['bonus'] - rec['advance']
+                            
                             cat_table.append({
                                 "Employee ID": r[0], "Name": r[1], "Department": r[4], "Category": r[3], "Designation": r[2],
-                                "Base Salary/Rate": r[5], "Total Earnings": round(total_earn, 2), "Absent Cut": round(ab_cut, 2),
-                                "Fine/Penalty": saved_att['fine'], "Net Payable (Tk)": round(net_p, 2)
+                                "Base Salary/Rate": r[5], "Absent Cut": round(ab_cut, 2), "Fine/Penalty": rec['fine'],
+                                "OT Earnings": round(ot_total, 2), "Bonus": rec['bonus'], "Advance Deduct": rec['advance'],
+                                "Net Payable (Tk)": round(final_payable, 2)
                             })
-                        df_cat = pd.DataFrame(cat_table) if cat_table else pd.DataFrame(columns=["Employee ID", "Name", "Department", "Category", "Designation", "Base Salary/Rate", "Total Earnings", "Absent Cut", "Fine/Penalty", "Net Payable (Tk)"])
+                        df_cat = pd.DataFrame(cat_table) if cat_table else pd.DataFrame()
                         df_cat.to_excel(writer, index=False, sheet_name=s_name)
-                
-                st.download_button(label="📥 Download Now", data=ex_buf.getvalue(), file_name=f"RECON_Payroll_Sheet_{select_m}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                st.download_button(label="📥 Download Now", data=ex_buf.getvalue(), file_name=f"RECON_Advanced_Payroll_{select_m}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
     else: st.info("Database is empty. Please add people from the left panel.")
