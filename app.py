@@ -34,7 +34,6 @@ col1, col2 = st.columns([1, 2.3])
 with col1:
     st.header("➕ Add New Person")
     
-    # আইডি ডুপ্লিকেট হলে ফর্মের ডাটা ধরে রাখার জন্য সেশন স্টেট মেমোরি ব্যবহার
     if "form_id" not in st.session_state: st.session_state.form_id = ""
     if "form_name" not in st.session_state: st.session_state.form_name = ""
     if "form_desg" not in st.session_state: st.session_state.form_desg = ""
@@ -62,14 +61,12 @@ with col1:
                     conn.commit()
                     conn.close()
                     st.success(f"{name} successfully added!")
-                    # সফল হলে সেশন স্টেট ক্লিয়ার করে পেজ রিলোড হবে
                     st.session_state.form_id = ""
                     st.session_state.form_name = ""
                     st.session_state.form_desg = ""
                     st.session_state.form_salary = ""
                     st.rerun()
                 except sqlite3.IntegrityError:
-                    # 🛠️ একই আইডি দুইবার দিলে শুধু ওয়ার্নিং দেবে, লেখাগুলো মুছবে না
                     st.session_state.form_id = input_id
                     st.session_state.form_name = name
                     st.session_state.form_desg = designation
@@ -156,7 +153,7 @@ with col2:
         
         tab_emp, tab0, tab1, tab2 = st.tabs(["👥 All Employees", "🔍 Search Employee", "📄 Individual Pay Slip", "📊 Categorized Salary Sheet"])
         
-        # 🆕 TAB 1: ALL EMPLOYEES (NOW CATEGORIZED SEPARATELY)
+        # 👥 TAB 1: ALL EMPLOYEES (FIXED MANAGER FILTER)
         with tab_emp:
             st.markdown("### 👥 Manage Employees (By Category)")
             
@@ -176,7 +173,7 @@ with col2:
                         for r in cat_members:
                             render_inline_management(r, prefix="all_tab")
 
-        # 🆕 TAB 2: SEARCH FEATURE (NOW HAS INLINE EDIT/REMOVE TOO!)
+        # 🔍 TAB 2: SEARCH FEATURE WITH LIVE ACTIONS
         with tab0:
             st.markdown("### 🔍 Live Search & Quick Action")
             search_query = st.text_input("Enter Employee ID or Name to search", placeholder="Type here...")
