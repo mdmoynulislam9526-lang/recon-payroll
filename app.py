@@ -28,23 +28,26 @@ def get_db_connection():
 st.title("💼 RECON LABORATORIES LTD - Professional Payroll System")
 st.markdown("---")
 
-col1, col2 = st.columns([1.2, 2])
+col1, col2 = st.columns([1.3, 2])
 
+# --- LEFT SIDE: EMPLOYEE MANAGEMENT (ADD, EDIT, REMOVE) ---
 with col1:
+    # 1. ADD EMPLOYEE
     st.header("➕ Add New Person")
     with st.form("employee_form", clear_on_submit=True):
-        input_id = st.text_input("ID (e.g., RECON-M01)")
+        input_id = st.text_input("ID (e.g., RECON-01)")
         name = st.text_input("Name")
-        department = st.selectbox("Select Department (বিভাগ)", [
-            "Production (উৎপাদন)", "Quality Control (কিউসি)", "Development (ডেভেলপমেন্ট)",
-            "Maintenance (মেইনটেইনেন্স)", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"
+        department = st.selectbox("Select Department", [
+            "Production", "Quality Control", "Development",
+            "Maintenance", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"
         ])
         category = st.selectbox("Select Category", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"])
-        designation = st.text_input("Designation (পদবী)")
+        designation = st.text_input("Designation")
         salary = st.text_input("Gross Salary / Daily Wage Rate (Tk)")
+        
         if st.form_submit_button("Add to Database"):
             if not (input_id and name and designation and salary):
-                st.error("সব ঘর পূরণ করুন!")
+                st.error("Please fill all fields!")
             else:
                 try:
                     conn = get_db_connection()
@@ -52,12 +55,56 @@ with col1:
                                    (input_id, name, designation, category, department, float(salary)))
                     conn.commit()
                     conn.close()
-                    st.success(f"{name} সফলভাবে যুক্ত হয়েছেন!")
+                    st.success(f"{name} successfully added!")
                     st.rerun()
-                except sqlite3.IntegrityError: st.error("IDটি ইতিমধ্যে আছে!")
-                except ValueError: st.error("টাকা সংখ্যায় দিন!")
+                except sqlite3.IntegrityError: st.error("This ID already exists!")
+                except ValueError: st.error("Salary must be a number!")
 
     st.markdown("---")
+    
+    # 2. EDIT EMPLOYEE SECTION (NEW FEATURE)
+    st.header("📝 Edit Employee Info")
+    conn = get_db_connection()
+    all_rows = conn.cursor().execute("SELECT * FROM employees_final_version").fetchall()
+    conn.close()
+    
+    if all_rows:
+        edit_options = {f"ID: {r[0]} | {r[1]}": r for r in all_rows}
+        selected_edit_key = st.selectbox("Select Person to Edit", list(edit_options.keys()))
+        emp_to_edit = edit_options[selected_edit_key]
+        
+        with st.form("edit_employee_form"):
+            edit_name = st.text_input("Edit Name", value=emp_to_edit[1])
+            
+            dept_list = ["Production", "Quality Control", "Development", "Maintenance", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"]
+            edit_dept = st.selectbox("Edit Department", dept_list, index=dept_list.index(emp_to_edit[4]) if emp_to_edit[4] in dept_list else 0)
+            
+            cat_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
+            edit_cat = st.selectbox("Edit Category", cat_list, index=cat_list.index(emp_to_edit[3]) if emp_to_edit[3] in cat_list else 0)
+            
+            edit_desg = st.text_input("Edit Designation", value=emp_to_edit[2])
+            edit_salary = st.text_input("Edit Gross Salary / Daily Rate", value=str(emp_to_edit[5]))
+            
+            if st.form_submit_button("Update Employee Info", type="secondary", use_container_width=True):
+                try:
+                    conn = get_db_connection()
+                    conn.cursor().execute("""
+                        UPDATE employees_final_version 
+                        SET name=?, designation=?, category=?, department=?, salary=? 
+                        WHERE emp_id=?
+                    """, (edit_name, edit_desg, edit_cat, edit_dept, float(edit_salary), emp_to_edit[0]))
+                    conn.commit()
+                    conn.close()
+                    st.success("Employee information updated successfully!")
+                    st.rerun()
+                except ValueError:
+                    st.error("Salary must be a number!")
+    else:
+        st.info("No employee available to edit.")
+
+    st.markdown("---")
+    
+    # 3. REMOVE EMPLOYEE
     st.header("❌ Remove Person")
     conn = get_db_connection()
     del_rows = conn.cursor().execute("SELECT emp_id, name, department FROM employees_final_version").fetchall()
@@ -70,9 +117,10 @@ with col1:
             conn.cursor().execute("DELETE FROM employees_final_version WHERE emp_id = ?", (del_options[selected_del],))
             conn.commit()
             conn.close()
-            st.success("মুছে ফেলা হয়েছে!")
+            st.success("Successfully deleted from database!")
             st.rerun()
 
+# --- RIGHT SIDE: CALCULATIONS & REPORTING ---
 with col2:
     st.header("📋 Payroll Calculation & Reports")
     conn = get_db_connection()
@@ -85,7 +133,7 @@ with col2:
         select_y = st.selectbox("Select Year", [str(y) for y in range(2024, 2031)], index=2)
         full_month = f"{select_m}, {select_y}"
         
-        tab1, tab2 = st.tabs(["📄 Individual Pay Slip", "📊 Full Salary Sheet (সবার একসাথে)"])
+        tab1, tab2 = st.tabs(["📄 Individual Pay Slip", "📊 Full Salary Sheet"])
         
         with tab1:
             emp_options = {f"[{r[4]}] {r[0]} - {r[1]}": r for r in rows}
@@ -115,7 +163,7 @@ with col2:
             st.download_button("📥 Download Pay Slip (PDF)", data=pdf_bytes, file_name=f"PaySlip_{selected_emp[0]}.pdf", mime="application/pdf", use_container_width=True)
 
         with tab2:
-            st.markdown(f"### 📋 {full_month} এর স্যালারি শিট জেনারেটর")
+            st.markdown(f"### 📋 Salary Sheet Generator for {full_month}")
             sheet_data = []
             with st.form("bulk_sheet_form"):
                 for r in rows:
@@ -140,11 +188,11 @@ with col2:
                     final_table.append({
                         "Employee ID": eid, "Name": name, "Department": dept, "Category": cat, "Designation": desg,
                         "Base Salary/Rate": s_rate, "Total Earnings": round(total_earn, 2), "Absent Cut": round(ab_cut, 2),
-                        "Fine/Penalty": round(item['fine_amount'], 2), "Net Payable (টাকা)": round(net_p, 2)
+                        "Fine/Penalty": round(item['fine_amount'], 2), "Net Payable (Tk)": round(net_p, 2)
                     })
                 df = pd.DataFrame(final_table)
                 st.dataframe(df, use_container_width=True)
                 ex_buf = BytesIO()
                 with pd.ExcelWriter(ex_buf, engine='openpyxl') as writer: df.to_excel(writer, index=False, sheet_name="SalarySheet")
                 st.download_button(label="📥 Download Full Salary Sheet (Excel)", data=ex_buf.getvalue(), file_name=f"RECON_Payroll_Sheet_{select_m}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, type="primary")
-    else: st.info("ডাটাবেজ খালি। লোক যুক্ত করুন।")
+    else: st.info("Database is empty. Please add people from the left panel.")
