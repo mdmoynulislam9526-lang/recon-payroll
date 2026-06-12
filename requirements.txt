@@ -3,3 +3,4 @@ reportlab
 streamlit
 pandas
 openpyxl
+matplotlib
