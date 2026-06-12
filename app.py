@@ -125,16 +125,14 @@ with col2:
         select_y = st.selectbox("Select Year", [str(y) for y in range(2024, 2031)], index=2)
         full_month = f"{select_m}, {select_y}"
         
-        # 🎯 এখানে নতুন ৩টি ট্যাব সাজানো হয়েছে (Search ট্যাব যুক্ত করা হয়েছে)
         tab0, tab1, tab2 = st.tabs(["🔍 Search Employee", "📄 Individual Pay Slip", "📊 Categorized Salary Sheet"])
         
-        # TAB 0: NEW SEARCH FEATURE
+        # TAB 0: SEARCH FEATURE
         with tab0:
             st.markdown("### 🔍 Live Employee Directory Search")
             search_query = st.text_input("Enter Employee ID or Name to search", placeholder="Type here... (e.g., RECON-01 or Satter)")
             
             if search_query:
-                # নাম বা আইডি আংশিক মিললেও ডাটা খুঁজে বের করার লজিক
                 search_results = [
                     r for r in rows 
                     if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()
@@ -144,8 +142,6 @@ with col2:
                     st.success(f"Found {len(search_results)} employee(s) matching your search:")
                     for emp in search_results:
                         eid, ename, edesg, ecat, edept, esalary = emp
-                        
-                        # প্রতিটা ইউজারের ডাটা সুন্দর বক্সে দেখানোর জন্য কন্টেইনার
                         with st.container():
                             st.markdown(f"#### 👤 {ename} (ID: {eid})")
                             c_detail1, c_detail2 = st.columns(2)
@@ -283,7 +279,12 @@ with col2:
                                 "Fine/Penalty": saved_att['fine'], "Net Payable (Tk)": round(net_p, 2)
                             })
                         
-                        df_cat = pd.DataFrame(cat_table if cat_table else columns=["Employee ID", "Name", "Department", "Category", "Designation", "Base Salary/Rate", "Total Earnings", "Absent Cut", "Fine/Penalty", "Net Payable (Tk)"])
+                        # 🛠️ সংশোধন (Line 286): এখানে pd.DataFrame তৈরির ভুলটি ঠিক করা হয়েছে
+                        if cat_table:
+                            df_cat = pd.DataFrame(cat_table)
+                        else:
+                            df_cat = pd.DataFrame(columns=["Employee ID", "Name", "Department", "Category", "Designation", "Base Salary/Rate", "Total Earnings", "Absent Cut", "Fine/Penalty", "Net Payable (Tk)"])
+                        
                         df_cat.to_excel(writer, index=False, sheet_name=s_name)
                 
                 st.download_button(
