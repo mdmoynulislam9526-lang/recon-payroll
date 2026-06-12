@@ -30,7 +30,7 @@ st.markdown("---")
 
 col1, col2 = st.columns([1, 2.3])
 
-# --- LEFT SIDE: ADD EMPLOYEE (FORM PRESERVATION ON ERROR) ---
+# --- LEFT SIDE: ADD EMPLOYEE ---
 with col1:
     st.header("➕ Add New Person")
     
@@ -75,7 +75,7 @@ with col1:
                 except ValueError: 
                     st.error("Salary must be a number!")
 
-# --- REUSABLE FUNCTION FOR EDIT/DELETE (For both All-Tab & Search-Tab) ---
+# --- REUSABLE FUNCTION FOR EDIT/DELETE ---
 def render_inline_management(r, prefix=""):
     eid, ename, edesg, ecat, edept, esalary = r
     with st.container():
@@ -89,7 +89,6 @@ def render_inline_management(r, prefix=""):
             if st.button("Delete ❌", key=f"{prefix}_del_{eid}", use_container_width=True, type="secondary"):
                 st.session_state[f"dmode_{prefix}_{eid}"] = True
 
-        # Inline Edit Form
         if st.session_state.get(f"emode_{prefix}_{eid}", False):
             with st.form(key=f"form_{prefix}_{eid}"):
                 st.markdown(f"##### 📝 Editing: {ename} ({eid})")
@@ -118,7 +117,6 @@ def render_inline_management(r, prefix=""):
                         st.session_state[f"emode_{prefix}_{eid}"] = False
                         st.rerun()
 
-        # Inline Delete Confirmation
         if st.session_state.get(f"dmode_{prefix}_{eid}", False):
             st.warning(f"Are you sure you want to completely remove **{ename} ({eid})**?")
             dc1, dc2 = st.columns(2)
@@ -153,35 +151,30 @@ with col2:
         
         tab_emp, tab0, tab1, tab2 = st.tabs(["👥 All Employees", "🔍 Search Employee", "📄 Individual Pay Slip", "📊 Categorized Salary Sheet"])
         
-        # 👥 TAB 1: ALL EMPLOYEES (FIXED MANAGER FILTER)
+        # TAB 1: ALL EMPLOYEES
         with tab_emp:
             st.markdown("### 👥 Manage Employees (By Category)")
-            
             categories_map = {
                 "💼 Managers": "Manager",
                 "👔 Officers": "Officer",
                 "🛠️ Workers (Permanent)": "Worker (Permanent)",
                 "📆 Workers (Daily Basis)": "Worker (Daily Basis)"
             }
-            
             for title, cat_value in categories_map.items():
                 cat_members = [r for r in rows if r[3] == cat_value]
                 with st.expander(f"{title} ({len(cat_members)})", expanded=True):
-                    if not cat_members:
-                        st.info(f"No employees registered under {cat_value}.")
+                    if not cat_members: st.info(f"No employees registered under {cat_value}.")
                     else:
-                        for r in cat_members:
-                            render_inline_management(r, prefix="all_tab")
+                        for r in cat_members: render_inline_management(r, prefix="all_tab")
 
-        # 🔍 TAB 2: SEARCH FEATURE WITH LIVE ACTIONS
+        # TAB 2: SEARCH FEATURE
         with tab0:
             st.markdown("### 🔍 Live Search & Quick Action")
             search_query = st.text_input("Enter Employee ID or Name to search", placeholder="Type here...")
-            
             if search_query:
                 search_results = [r for r in rows if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()]
                 if search_results:
-                    st.success(f"Found {len(search_results)} result(s). You can Edit/Delete directly from here:")
+                    st.success(f"Found {len(search_results)} result(s):")
                     for emp in search_results:
                         st.markdown(f"**Current Category:** *{emp[3]}*")
                         render_inline_management(emp, prefix="search_tab")
@@ -254,21 +247,37 @@ with col2:
                     st.session_state['attendance_tracker'][eid] = {'absent': item['absent_days'], 'present': item['present_days'], 'fine': item['fine_amount']}
                 st.success(f"Calculated and saved current inputs for {view_cat} successfully!")
 
+            # 🛠️ নতুন আপডেট: এখন লাইভ টেবিলে নেট সেলারি (Net Salary) হিসাব হয়ে দেখাবে 🛠️
             st.markdown("---")
-            st.markdown("### 👁️ Current Month Attendance Overview (All Database)")
+            st.markdown("### 👁️ Current Month Attendance & Net Salary Overview (All Database)")
+            st.caption("This table reflects basic data along with dynamically calculated Net Salary based on saved attendance for this session.")
+            
             tracker_table = []
             current_tracker = st.session_state.get('attendance_tracker', {})
             
             for r in rows:
-                eid, name, desg, cat, dept, _ = r
+                eid, name, desg, cat, dept, base_sal = r
                 saved_data = current_tracker.get(eid, {'absent': 0, 'present': 26 if cat == 'Worker (Daily Basis)' else 0, 'fine': 0.0})
+                
+                # টেবিলের জন্য লাইভ স্যালারি ক্যালকুলেশন কল করা হলো
+                _, _, _, _, ab_cut, net_p, _ = calculate_salary_breakdown(
+                    base_sal, saved_data['absent'], saved_data['fine'], cat, saved_data['present']
+                )
+                
                 tracker_table.append({
-                    "ID": eid, "Name": name, "Category": cat, "Department": dept,
+                    "ID": eid, 
+                    "Name": name, 
+                    "Category": cat, 
+                    "Base Salary/Rate": f"Tk {base_sal:,.2f}",
                     "Present Days": saved_data['present'] if cat == 'Worker (Daily Basis)' else "N/A (Fixed)",
                     "Absent Days": saved_data['absent'] if cat != 'Worker (Daily Basis)' else 0,
-                    "Fine/Penalty (Tk)": saved_data['fine']
+                    "Absent Cut (Tk)": f"Tk {ab_cut:,.2f}",
+                    "Fine/Penalty (Tk)": f"Tk {saved_data['fine']:,.2f}",
+                    "Net Salary (Tk)": f"Tk {net_p:,.2f}" # 🔥 এখন টেবিলেই নেট সেলারি দেখা যাবে!
                 })
-            if tracker_table: st.dataframe(pd.DataFrame(tracker_table), use_container_width=True)
+                
+            if tracker_table: 
+                st.dataframe(pd.DataFrame(tracker_table), use_container_width=True)
 
             st.markdown("---")
             st.markdown("##### 📥 Download Full Combined Excel Sheet (Separated by Tabs)")
