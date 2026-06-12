@@ -230,7 +230,7 @@ with col2:
 
             sheet_data = []
             if final_display_rows:
-                with st.form("bulk_sheet_form_v4"):
+                with st.form("bulk_sheet_form_v5"):
                     st.markdown(f"##### 📝 Editing Attendance & Financials for {len(final_display_rows)} Person(s)")
                     for r in final_display_rows:
                         st.markdown(f"**🔹 {r[0]} - {r[1]}** ({r[2]})")
@@ -240,12 +240,17 @@ with col2:
                         with col_in1:
                             if r[3] == 'Worker (Daily Basis)':
                                 p_d = st.number_input("Present Days", 0, days_in_month, int(rec['present']), key=f"p_{r[0]}")
-                                # 🆕 ডেইলি বেসিস কর্মীদের জন্য ক্যালেন্ডার দিন থেকে প্রেজেন্ট দিন বাদে বাকিটা অটো এবসেন্ট হিসাব হবে
                                 a_d = days_in_month - p_d
                                 st.markdown(f"ℹ️ *Auto Absent Calculated:* **{a_d} Days**")
                             else:
-                                p_d = st.number_input("Duty Days (Base)", 0, 26, int(rec['present']), key=f"p_{r[0]}")
-                                a_d = st.number_input("Absent Days", 0, 26, int(rec['absent']), key=f"a_{r[0]}")
+                                # 🆕 ১. বেস দিন ২৬ ফিক্সড না রেখে সর্বোচ্চ ১০০ দিন পর্যন্ত বাড়ানোর অপশন দেওয়া হলো (ডিফল্ট ২৬ থাকবে)
+                                total_target_days = st.number_input("Total Target Month Days (Base)", 1, 100, int(rec['present'] + rec['absent']) if rec['absent'] > 0 else max(26, int(rec['present'])), key=f"target_{r[0]}")
+                                a_d = st.number_input("Absent Days", 0, total_target_days, int(rec['absent']), key=f"a_{r[0]}")
+                                
+                                # 🆕 ২. সূত্র পরিবর্তন: উপস্থিত দিন = বেস দিন - এবসেন্ট দিন (যা অটোমেশন নিশ্চিত করবে)
+                                p_d = total_target_days - a_d
+                                st.markdown(f"📊 *Auto Present Calculated:* **{p_d} Days**")
+                                
                             f_d = st.number_input("Penalty/Fine (Tk)", 0.0, value=float(rec['fine']), key=f"f_{r[0]}")
                         
                         with col_in2:
@@ -289,7 +294,6 @@ with col2:
 
                     _, _, _, _, ab_cut, net_p, _ = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], cat, rec['present'])
                     
-                    # 🆕 ডেইলি বেসিস কর্মীদের জন্য লাইভ টেবিলে এবসেন্ট দিন ডাইনামিকলি সেট করা হচ্ছে
                     display_absent = rec['absent'] if cat != 'Worker (Daily Basis)' else (days_in_month - rec['present'])
                     ot_total = rec['ot_hrs'] * rec['ot_rate']
                     final_payable = net_p + ot_total + rec['bonus'] - rec['advance']
@@ -297,7 +301,7 @@ with col2:
                     tracker_table.append({
                         "ID": eid, "Name": name, "Designation": desg, "Base Salary/Rate": f"Tk {base_sal:,.2f}",
                         "Present Days": rec['present'], 
-                        "Absent Days": display_absent, # 🆕 এখন টেবিলে সঠিকভাবে দিন সংখ্যা দেখাবে
+                        "Absent Days": display_absent,
                         "Absent Cut": f"Tk {ab_cut:,.2f}", "Fine": f"Tk {rec['fine']:,.2f}",
                         "OT Earn": f"Tk {ot_total:,.2f}", "Bonus": f"Tk {rec['bonus']:,.2f}", "Advance Cut": f"Tk {rec['advance']:,.2f}",
                         "Net Payable": f"Tk {final_payable:,.2f}"
@@ -324,7 +328,6 @@ with col2:
                             _, _, _, _, ab_cut, net_p, total_earn = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], r[3], rec['present'])
                             ot_total = rec['ot_hrs'] * rec['ot_rate']
                             final_payable = net_p + ot_total + rec['bonus'] - rec['advance']
-                            # 🆕 এক্সেল শিটের জন্যও আপডেট করা হলো
                             display_absent = rec['absent'] if r[3] != 'Worker (Daily Basis)' else (days_in_month - rec['present'])
                             
                             cat_table.append({
