@@ -12,14 +12,12 @@ st.set_page_config(page_title="RECON Payroll System", layout="wide", page_icon="
 def init_db():
     conn = sqlite3.connect("payroll_v5.db", check_same_thread=False)
     cursor = conn.cursor()
-    # মূল কর্মচারী টেবিল
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS employees_final_version (
             emp_id TEXT PRIMARY KEY, name TEXT NOT NULL, designation TEXT NOT NULL,
             category TEXT NOT NULL, department TEXT NOT NULL, salary REAL NOT NULL
         )
     """)
-    # 🆕 স্থায়ীভাবে হাজিরা ও বোনাস রেকর্ড সেভ করার জন্য নতুন টেবিল
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS monthly_attendance_records (
             month_year TEXT, emp_id TEXT, present_days INTEGER, absent_days INTEGER, 
@@ -151,14 +149,13 @@ with col2:
         month_num = months_list.index(select_m) + 1
         days_in_month = calendar.monthrange(int(select_y), month_num)[1]
         
-        # 🆕 ডাটাবেজ থেকে এই নির্দিষ্ট মাসের হাজিরা লোড করা
         conn = get_db_connection()
         db_records = conn.cursor().execute("SELECT * FROM monthly_attendance_records WHERE month_year=?", (full_month,)).fetchall()
         conn.close()
         
         saved_db_tracker = {r[1]: {"present": r[2], "absent": r[3], "fine": r[4], "ot_hrs": r[5], "ot_rate": r[6], "bonus": r[7], "advance": r[8]} for r in db_records}
 
-        # 🆕 ১. লাইভ ড্যাশবোর্ড সামারি ক্যালকুলেশন
+        # ১. লাইভ ড্যাশবোর্ড সামারি ক্যালকুলেশন
         total_payout, total_fine, total_bonus, total_advance = 0.0, 0.0, 0.0, 0.0
         for r in rows:
             eid, _, _, cat, _, base_sal = r
@@ -169,14 +166,12 @@ with col2:
                 calc_salary = (base_sal / 26) * rec['present']
                 
             _, _, _, _, ab_cut, net_p, _ = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], cat, rec['present'])
-            # টোটাল পেআউটের সাথে বোনাস এবং ওভারটাইম যোগ করা ও অগ্রিম বিয়োগ করা
             net_final = net_p + (rec['ot_hrs'] * rec['ot_rate']) + rec['bonus'] - rec['advance']
             total_payout += net_final
             total_fine += rec['fine'] + ab_cut
             total_bonus += rec['bonus']
             total_advance += rec['advance']
 
-        # ড্যাশবোর্ড ডিসপ্লে
         st.markdown("### 📊 Financial Dashboard Summary")
         m_col1, m_col2, m_col3, m_col4 = st.columns(4)
         m_col1.metric("Total Employees", len(rows))
@@ -219,36 +214,35 @@ with col2:
                     _, _, _, _, ab_cut, net_p, _ = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], selected_emp[3], rec['present'])
                     net_final = net_p + (rec['ot_hrs'] * rec['ot_rate']) + rec['bonus'] - rec['advance']
                     
-                    st.markdown(f"#### **Net Payable Salary:** Tk {net_final:,.2f} *(OT: {rec['ot_hrs']} Hrs, Bonus: Tk {rec['bonus']}, Advance Cut: Tk {rec['advance']})*")
+                    st.markdown(f"#### **Net Payable Salary:** Tk {net_final:,.2f}")
                     
                     pdf_buf = BytesIO()
-                    # পিডিএফ এ ফাইনাল অ্যামাউন্ট সামঞ্জস্য করার জন্য স্যালারি মডিফাই করে পাঠানো
                     generate_pdf_bytes((selected_emp[0], selected_emp[1], selected_emp[2], selected_emp[3], selected_emp[4], calc_salary + (rec['ot_hrs'] * rec['ot_rate']) + rec['bonus'] - rec['advance']), full_month, rec['absent'], rec['fine'], rec['present'], pdf_buf)
                     st.download_button("📥 Download Pay Slip (PDF)", data=pdf_buf.getvalue(), file_name=f"PaySlip_{selected_emp[0]}_{select_m}.pdf", mime="application/pdf", use_container_width=True)
 
-        # TAB 4: 🆕 সম্পূর্ণ নতুন অ্যাডভান্সড লাইভ সার্চ এবং ডাটাবেজ সেভিং সিস্টেম
+        # TAB 4: ATTENDANCE & PAYROLL PROCESSOR
         with tab2:
             view_cat = st.selectbox("Select Category to Process", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
             filtered_rows = [r for r in rows if r[3] == view_cat]
             
-            search_emp_input = st.text_input(f"🔍 Search Person within {view_cat}", placeholder="Type Name/ID...", key=f"s_{view_cat}")
+            search_emp_input = st.text_input(f"🔍 Search Person within {view_cat}", placeholder="Type Name/ID...", key="s_att_search_box")
             final_display_rows = [r for r in filtered_rows if search_emp_input.lower() in r[0].lower() or search_emp_input.lower() in r[1].lower()] if search_emp_input else filtered_rows
 
             sheet_data = []
             if final_display_rows:
-                with st.form("bulk_sheet_form_v3"):
+                with st.form("bulk_sheet_form_v4"):
                     st.markdown(f"##### 📝 Editing Attendance & Financials for {len(final_display_rows)} Person(s)")
                     for r in final_display_rows:
                         st.markdown(f"**🔹 {r[0]} - {r[1]}** ({r[2]})")
-                        
-                        # ডাটাবেজ থেকে তথ্য নেওয়া (আগে সেভ করা থাকলে অটো লোড হবে)
                         rec = saved_db_tracker.get(r[0], {"present": days_in_month if r[3] == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
                         
                         col_in1, col_in2, col_in3 = st.columns(3)
                         with col_in1:
                             if r[3] == 'Worker (Daily Basis)':
                                 p_d = st.number_input("Present Days", 0, days_in_month, int(rec['present']), key=f"p_{r[0]}")
-                                a_d = 0
+                                # 🆕 ডেইলি বেসিস কর্মীদের জন্য ক্যালেন্ডার দিন থেকে প্রেজেন্ট দিন বাদে বাকিটা অটো এবসেন্ট হিসাব হবে
+                                a_d = days_in_month - p_d
+                                st.markdown(f"ℹ️ *Auto Absent Calculated:* **{a_d} Days**")
                             else:
                                 p_d = st.number_input("Duty Days (Base)", 0, 26, int(rec['present']), key=f"p_{r[0]}")
                                 a_d = st.number_input("Absent Days", 0, 26, int(rec['absent']), key=f"a_{r[0]}")
@@ -268,13 +262,12 @@ with col2:
                     if st.form_submit_button("💾 Save Entry to Database", use_container_width=True, type="primary"):
                         conn = get_db_connection()
                         for item in sheet_data:
-                            # ডাটাবেজে রেকর্ড রিপ্লেস/ইনসার্ট করা
                             conn.cursor().execute("""
                                 INSERT OR REPLACE INTO monthly_attendance_records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                             """, (full_month, item['eid'], item['p'], item['a'], item['f'], item['oth'], item['otr'], item['bonus'], item['adv']))
                         conn.commit()
                         conn.close()
-                        st.success(f"Successfully saved records for {full_month} into system database permanent storage!")
+                        st.success(f"Successfully saved records for {full_month} into system permanent storage!")
                         st.rerun()
 
             # --- SEPARATED CATEGORY OVERVIEW TABLE ---
@@ -296,13 +289,16 @@ with col2:
 
                     _, _, _, _, ab_cut, net_p, _ = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], cat, rec['present'])
                     
-                    # নতুন বোনাস ও ওভারটাইম সমীকরণ যোগ এবং অগ্রিম বিয়োগ
+                    # 🆕 ডেইলি বেসিস কর্মীদের জন্য লাইভ টেবিলে এবসেন্ট দিন ডাইনামিকলি সেট করা হচ্ছে
+                    display_absent = rec['absent'] if cat != 'Worker (Daily Basis)' else (days_in_month - rec['present'])
                     ot_total = rec['ot_hrs'] * rec['ot_rate']
                     final_payable = net_p + ot_total + rec['bonus'] - rec['advance']
                     
                     tracker_table.append({
                         "ID": eid, "Name": name, "Designation": desg, "Base Salary/Rate": f"Tk {base_sal:,.2f}",
-                        "Duty/Present": rec['present'], "Absent Cut": f"Tk {ab_cut:,.2f}", "Fine": f"Tk {rec['fine']:,.2f}",
+                        "Present Days": rec['present'], 
+                        "Absent Days": display_absent, # 🆕 এখন টেবিলে সঠিকভাবে দিন সংখ্যা দেখাবে
+                        "Absent Cut": f"Tk {ab_cut:,.2f}", "Fine": f"Tk {rec['fine']:,.2f}",
                         "OT Earn": f"Tk {ot_total:,.2f}", "Bonus": f"Tk {rec['bonus']:,.2f}", "Advance Cut": f"Tk {rec['advance']:,.2f}",
                         "Net Payable": f"Tk {final_payable:,.2f}"
                     })
@@ -328,12 +324,14 @@ with col2:
                             _, _, _, _, ab_cut, net_p, total_earn = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], r[3], rec['present'])
                             ot_total = rec['ot_hrs'] * rec['ot_rate']
                             final_payable = net_p + ot_total + rec['bonus'] - rec['advance']
+                            # 🆕 এক্সেল শিটের জন্যও আপডেট করা হলো
+                            display_absent = rec['absent'] if r[3] != 'Worker (Daily Basis)' else (days_in_month - rec['present'])
                             
                             cat_table.append({
                                 "Employee ID": r[0], "Name": r[1], "Department": r[4], "Category": r[3], "Designation": r[2],
-                                "Base Salary/Rate": r[5], "Absent Cut": round(ab_cut, 2), "Fine/Penalty": rec['fine'],
-                                "OT Earnings": round(ot_total, 2), "Bonus": rec['bonus'], "Advance Deduct": rec['advance'],
-                                "Net Payable (Tk)": round(final_payable, 2)
+                                "Base Salary/Rate": r[5], "Present Days": rec['present'], "Absent Days": display_absent,
+                                "Absent Cut": round(ab_cut, 2), "Fine/Penalty": rec['fine'], "OT Earnings": round(ot_total, 2), 
+                                "Bonus": rec['bonus'], "Advance Deduct": rec['advance'], "Net Payable (Tk)": round(final_payable, 2)
                             })
                         df_cat = pd.DataFrame(cat_table) if cat_table else pd.DataFrame()
                         df_cat.to_excel(writer, index=False, sheet_name=s_name)
