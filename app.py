@@ -150,7 +150,7 @@ with col2:
         select_y = st.selectbox("Select Year", [str(y) for y in range(2024, 2031)], index=2)
         full_month = f"{select_m}, {select_y}"
         
-        # ক্যালেন্ডার মাসের দিন সংখ্যা বের করা (ডেইলি বেসিসের জন্য)
+        # ক্যালেন্ডার মাসের দিন সংখ্যা বের করা
         month_num = months_list.index(select_m) + 1
         days_in_month = calendar.monthrange(int(select_y), month_num)[1]
         
@@ -204,9 +204,7 @@ with col2:
                         st.success(f"Selected: **{selected_emp[1]} ({selected_emp[0]})** — *{selected_emp[3]}*")
                     
                     with st.form("calculation_form_search"):
-                        # 🆕 নিয়মানুযায়ী ডেসক্রিপশনে মোট দিন সংখ্যা দেখানো হচ্ছে
-                        total_allowed_days = days_in_month if selected_emp[3] == 'Worker (Daily Basis)' else 26
-                        st.markdown(f"##### Calculate Pay Slip for **{selected_emp[1]}** ({full_month}) — Standard Calculation Base: {total_allowed_days} Days")
+                        st.markdown(f"##### Calculate Pay Slip for **{selected_emp[1]}** ({full_month})")
                         
                         c1, c2 = st.columns(2)
                         with c1:
@@ -214,9 +212,9 @@ with col2:
                                 p_days = st.number_input("Total Present Days", 0, days_in_month, days_in_month, key="ind_p_search")
                                 a_days = 0
                             else:
-                                # 🆕 পার্মানেন্টদের অনুপস্থিতি হিসাবের সর্বোচ্চ লিমিট ফিক্সড ২৬ দিন করা হলো
+                                # 🆕 পার্মানেন্টদের ক্ষেত্রে প্রেজেন্ট দিন এবং এবসেন্ট দিন দুটোই ইচ্ছেমতো বসানোর ব্যবস্থা
+                                p_days = st.number_input("Total Present/Duty Days (Base)", 0, 26, 26, key="ind_p_search_fixed")
                                 a_days = st.number_input("Absent Days", 0, 26, 0, key="ind_a_search")
-                                p_days = 0
                         with c2: 
                             f_amt = st.number_input("Fine / Penalty (Tk)", 0.0, value=0.0, step=10.0, key="ind_f_search")
                         
@@ -224,15 +222,22 @@ with col2:
                             st.session_state['s_abs'], st.session_state['s_pres'], st.session_state['s_fine'] = a_days, p_days, f_amt
 
                     sa = st.session_state.get('s_abs', 0)
-                    sp = st.session_state.get('s_pres', days_in_month if selected_emp[3] == 'Worker (Daily Basis)' else 0)
+                    # পার্মানেন্ট হলে ক্যালকুলেশন মডিউলে প্রেজেন্ট ডে পাঠানোর প্রয়োজন নেই কারণ তাদের বেস ফিক্সড, তবে হিসাব ট্র্যাকিং এর জন্য রাখা হলো
+                    sp = st.session_state.get('s_pres', days_in_month if selected_emp[3] == 'Worker (Daily Basis)' else 26)
                     sf = st.session_state.get('s_fine', 0.0)
                     
-                    _, _, _, _, _, net_payable, _ = calculate_salary_breakdown(selected_emp[5], sa, sf, selected_emp[3], sp)
+                    # যদি পার্মানেন্ট স্টাফের প্রেজেন্ট দিন ২৬ থেকে কমানো হয়, তবে বেস স্যালারি সেই অনুপাতে সামঞ্জস্য হবে
+                    current_salary = selected_emp[5]
+                    if selected_emp[3] != 'Worker (Daily Basis)' and sp < 26:
+                        current_salary = (selected_emp[5] / 26) * sp
+
+                    _, _, _, _, _, net_payable, _ = calculate_salary_breakdown(current_salary, sa, sf, selected_emp[3], sp)
                     
                     st.markdown(f"#### **Net Payable Amount:** Tk {net_payable:,.2f}")
                     
                     pdf_buf = BytesIO()
-                    generate_pdf_bytes(selected_emp, full_month, sa, sf, sp, pdf_buf)
+                    # পিডিএফ জেনারেটরের সুবিধার্থে কাস্টমাইজড স্যালারি পাঠানো হচ্ছে
+                    generate_pdf_bytes((selected_emp[0], selected_emp[1], selected_emp[2], selected_emp[3], selected_emp[4], current_salary), full_month, sa, sf, sp, pdf_buf)
                     pdf_bytes = pdf_buf.getvalue()
                     st.download_button(
                         "📥 Download Pay Slip (PDF)", 
@@ -251,12 +256,9 @@ with col2:
             view_cat = st.selectbox("Select Category to Input Attendance", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"])
             filtered_rows = [r for r in rows if r[3] == view_cat]
             
-            # 🆕 ক্যাটাগরি ওয়াইজ বেস দিন নির্ধারণ
-            cat_base_days = days_in_month if view_cat == 'Worker (Daily Basis)' else 26
-            
             sheet_data = []
             with st.form("bulk_sheet_form"):
-                st.markdown(f"##### Input Attendance Data for: **{view_cat}** (Base Calculation Days: {cat_base_days})")
+                st.markdown(f"##### Input Attendance Data for: **{view_cat}**")
                 if not filtered_rows: st.warning(f"No employees found in '{view_cat}' category.")
                 else:
                     for r in filtered_rows:
@@ -267,9 +269,9 @@ with col2:
                                 p_d = st.number_input(f"Present Days", 0, days_in_month, days_in_month, key=f"p_{r[0]}")
                                 a_d = 0
                             else:
-                                # 🆕 পার্মানেন্ট স্টাফদের ইনপুটে বেস দিন ২৬ করা হলো
+                                # 🆕 বাল্ক ইনপুট ফর্মেও স্থায়ী স্টাফদের জন্য প্রেজেন্ট ও এবসেন্ট দুটোই বসানোর ব্যবস্থা করা হলো
+                                p_d = st.number_input(f"Present/Duty Days", 0, 26, 26, key=f"p_{r[0]}")
                                 a_d = st.number_input(f"Absent Days", 0, 26, 0, key=f"a_{r[0]}")
-                                p_d = 0
                         with col_in2: f_d = st.number_input(f"Penalty/Fine (Tk)", 0.0, value=0.0, key=f"f_{r[0]}")
                         sheet_data.append({'emp_data': r, 'absent_days': a_d, 'present_days': p_d, 'fine_amount': f_d})
                 
@@ -283,12 +285,10 @@ with col2:
                 st.success(f"Calculated and saved current inputs for {view_cat} successfully!")
 
             st.markdown("---")
-            
-            # 🆕 স্ক্রিনে সবার নাম একসাথে মিক্সড না দেখিয়ে ক্যাটাগরি অনুযায়ী আলাদা আলাদা সেকশন/টেবিল করা হলো
             st.markdown("### 👁️ Current Month Attendance & Net Salary Overview (Separated Categories)")
             
             categories_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
-            display_titles = ["💼 Managers (Fixed 26 Days Base)", "👔 Officers (Fixed 26 Days Base)", "🛠️ Workers - Permanent (Fixed 26 Days Base)", f"📆 Workers - Daily Basis (Calendar {days_in_month} Days Base)"]
+            display_titles = ["💼 Managers", "👔 Officers", "🛠️ Workers - Permanent", f"📆 Workers - Daily Basis (Calendar {days_in_month} Days Base)"]
             current_tracker = st.session_state.get('attendance_tracker', {})
             
             for cat_name, title_text in zip(categories_list, display_titles):
@@ -304,16 +304,20 @@ with col2:
                         if cat == 'Worker (Daily Basis)':
                             saved_data = {'absent': 0, 'present': days_in_month, 'fine': 0.0} 
                         else:
-                            saved_data = {'absent': 0, 'present': 0, 'fine': 0.0}
+                            saved_data = {'absent': 0, 'present': 26, 'fine': 0.0}
                     
-                    # লাইভ হিসাব নিকাশ
+                    # যদি স্থায়ী স্টাফের প্রেজেন্ট দিন ২৬ থেকে কম হয় তবে বেস স্যালারি রেশিও অনুযায়ী কমবে
+                    calc_salary = base_sal
+                    if cat != 'Worker (Daily Basis)' and saved_data['present'] < 26:
+                        calc_salary = (base_sal / 26) * saved_data['present']
+
                     _, _, _, _, ab_cut, net_p, _ = calculate_salary_breakdown(
-                        base_sal, saved_data['absent'], saved_data['fine'], cat, saved_data['present']
+                        calc_salary, saved_data['absent'], saved_data['fine'], cat, saved_data['present']
                     )
                     
                     tracker_table.append({
                         "ID": eid, "Name": name, "Department": dept, "Designation": desg, "Base Salary/Rate": f"Tk {base_sal:,.2f}",
-                        "Present Days": saved_data['present'] if cat == 'Worker (Daily Basis)' else "N/A",
+                        "Present Days": saved_data['present'],
                         "Absent Days": saved_data['absent'] if cat != 'Worker (Daily Basis)' else 0,
                         "Absent Cut": f"Tk {ab_cut:,.2f}", "Fine/Penalty": f"Tk {saved_data['fine']:,.2f}",
                         "Net Payable Salary": f"Tk {net_p:,.2f}"
@@ -322,9 +326,6 @@ with col2:
                 if tracker_table:
                     st.markdown(f"##### {title_text}")
                     st.dataframe(pd.DataFrame(tracker_table), use_container_width=True)
-                elif cat_rows:
-                    st.markdown(f"##### {title_text}")
-                    st.info("No input provided yet for this category.")
 
             st.markdown("---")
             st.markdown("##### 📥 Download Full Combined Excel Sheet (Separated by Tabs)")
@@ -340,16 +341,19 @@ with col2:
                             if r[0] in st.session_state.get('attendance_tracker', {}):
                                 saved_att = st.session_state['attendance_tracker'][r[0]]
                             else:
-                                saved_att = {'absent': 0, 'present': days_in_month if r[3] == 'Worker (Daily Basis)' else 0, 'fine': 0.0}
+                                saved_att = {'absent': 0, 'present': days_in_month if r[3] == 'Worker (Daily Basis)' else 26, 'fine': 0.0}
                                 
-                            _, _, _, _, ab_cut, net_p, total_earn = calculate_salary_breakdown(r[5], saved_att['absent'], saved_att['fine'], r[3], saved_att['present'])
+                            calc_salary = r[5]
+                            if r[3] != 'Worker (Daily Basis)' and saved_att['present'] < 26:
+                                calc_salary = (r[5] / 26) * saved_att['present']
+
+                            _, _, _, _, ab_cut, net_p, total_earn = calculate_salary_breakdown(calc_salary, saved_att['absent'], saved_att['fine'], r[3], saved_att['present'])
                             cat_table.append({
                                 "Employee ID": r[0], "Name": r[1], "Department": r[4], "Category": r[3], "Designation": r[2],
                                 "Base Salary/Rate": r[5], "Total Earnings": round(total_earn, 2), "Absent Cut": round(ab_cut, 2),
                                 "Fine/Penalty": saved_att['fine'], "Net Payable (Tk)": round(net_p, 2)
                             })
                         df_cat = pd.DataFrame(cat_table) if cat_table else pd.DataFrame(columns=["Employee ID", "Name", "Department", "Category", "Designation", "Base Salary/Rate", "Total Earnings", "Absent Cut", "Fine/Penalty", "Net Payable (Tk)"])
-                        # এটি আলাদা আলাদা এক্সেল শীট হিসেবেই ডাটা সেভ করবে 
                         df_cat.to_excel(writer, index=False, sheet_name=s_name)
                 
                 st.download_button(label="📥 Download Now", data=ex_buf.getvalue(), file_name=f"RECON_Payroll_Sheet_{select_m}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
