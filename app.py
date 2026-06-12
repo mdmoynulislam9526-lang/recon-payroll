@@ -112,7 +112,7 @@ with col1:
             st.success("Successfully deleted from database!")
             st.rerun()
 
-# --- RIGHT SIDE: CALCULATIONS & REPORTING ---
+# --- RIGHT SIDE: CALCULATIONS, SEARCH & REPORTING ---
 with col2:
     st.header("📋 Payroll Calculation & Reports")
     conn = get_db_connection()
@@ -125,48 +125,86 @@ with col2:
         select_y = st.selectbox("Select Year", [str(y) for y in range(2024, 2031)], index=2)
         full_month = f"{select_m}, {select_y}"
         
-        tab1, tab2 = st.tabs(["📄 Individual Pay Slip", "📊 Categorized Salary Sheet"])
+        # 🎯 এখানে নতুন ৩টি ট্যাব সাজানো হয়েছে (Search ট্যাব যুক্ত করা হয়েছে)
+        tab0, tab1, tab2 = st.tabs(["🔍 Search Employee", "📄 Individual Pay Slip", "📊 Categorized Salary Sheet"])
         
+        # TAB 0: NEW SEARCH FEATURE
+        with tab0:
+            st.markdown("### 🔍 Live Employee Directory Search")
+            search_query = st.text_input("Enter Employee ID or Name to search", placeholder="Type here... (e.g., RECON-01 or Satter)")
+            
+            if search_query:
+                # নাম বা আইডি আংশিক মিললেও ডাটা খুঁজে বের করার লজিক
+                search_results = [
+                    r for r in rows 
+                    if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()
+                ]
+                
+                if search_results:
+                    st.success(f"Found {len(search_results)} employee(s) matching your search:")
+                    for emp in search_results:
+                        eid, ename, edesg, ecat, edept, esalary = emp
+                        
+                        # প্রতিটা ইউজারের ডাটা সুন্দর বক্সে দেখানোর জন্য কন্টেইনার
+                        with st.container():
+                            st.markdown(f"#### 👤 {ename} (ID: {eid})")
+                            c_detail1, c_detail2 = st.columns(2)
+                            with c_detail1:
+                                st.write(f"**Department:** {edept}")
+                                st.write(f"**Designation:** {edesg}")
+                            with c_detail2:
+                                st.write(f"**Category:** {ecat}")
+                                st.write(f"**Base Salary/Rate:** Tk {esalary:,.2f}")
+                            st.markdown("<hr style='margin:10px 0px; border-color:#ddd;'>", unsafe_allow_html=True)
+                else:
+                    st.error("No employee found with that ID or Name.")
+            else:
+                st.info("Please type an ID or Name above to see full details instantly.")
+
         # TAB 1: INDIVIDUAL PAY SLIP
         with tab1:
-            emp_options = {f"[{r[3]}] {r[0]} - {r[1]}": r for r in rows}
-            selected_emp = emp_options[st.selectbox("Select Person for Pay Slip", list(emp_options.keys()))]
+            st.markdown("##### 🔍 Filter Employee by Category first")
+            filter_pay_cat = st.selectbox("Filter Category for Pay Slip", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="pay_cat_filter")
+            filtered_pay_rows = [r for r in rows if r[3] == filter_pay_cat]
             
-            with st.form("calculation_form"):
-                c1, c2 = st.columns(2)
-                with c1:
-                    if selected_emp[3] == 'Worker (Daily Basis)':
-                        p_days = st.number_input("Total Present Days", 0, 31, 26, key="ind_p")
-                        a_days = 0
-                    else:
-                        a_days = st.number_input("Absent Days", 0, 26, 0, key="ind_a")
-                        p_days = 0
-                with c2: f_amt = st.number_input("Fine / Penalty (Tk)", 0.0, value=0.0, step=10.0, key="ind_f")
-                if st.form_submit_button("🔄 Calculate Slip"):
-                    st.session_state['f_abs'], st.session_state['f_pres'], st.session_state['f_fine'] = a_days, p_days, f_amt
+            if filtered_pay_rows:
+                emp_options = {f"{r[0]} - {r[1]} ({r[2]})": r for r in filtered_pay_rows}
+                selected_emp = emp_options[st.selectbox("Select Person", list(emp_options.keys()), key="pay_emp_select")]
+                
+                with st.form("calculation_form"):
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        if selected_emp[3] == 'Worker (Daily Basis)':
+                            p_days = st.number_input("Total Present Days", 0, 31, 26, key="ind_p")
+                            a_days = 0
+                        else:
+                            a_days = st.number_input("Absent Days", 0, 26, 0, key="ind_a")
+                            p_days = 0
+                    with c2: f_amt = st.number_input("Fine / Penalty (Tk)", 0.0, value=0.0, step=10.0, key="ind_f")
+                    if st.form_submit_button("🔄 Calculate Slip"):
+                        st.session_state['f_abs'], st.session_state['f_pres'], st.session_state['f_fine'] = a_days, p_days, f_amt
 
-            fa, fp, ff = st.session_state.get('f_abs', 0), st.session_state.get('f_pres', 26 if selected_emp[3] == 'Worker (Daily Basis)' else 0), st.session_state.get('f_fine', 0.0)
-            _, _, _, _, _, net_payable, _ = calculate_salary_breakdown(selected_emp[5], fa, ff, selected_emp[3], fp)
-            
-            st.write(f"**Net Payable:** Tk {net_payable:,.2f}")
-            pdf_buf = BytesIO()
-            generate_pdf_bytes(selected_emp, full_month, fa, ff, fp, pdf_buf)
-            pdf_bytes = pdf_buf.getvalue()
-            st.download_button("📥 Download Pay Slip (PDF)", data=pdf_bytes, file_name=f"PaySlip_{selected_emp[0]}.pdf", mime="application/pdf", use_container_width=True)
+                fa, fp, ff = st.session_state.get('f_abs', 0), st.session_state.get('f_pres', 26 if selected_emp[3] == 'Worker (Daily Basis)' else 0), st.session_state.get('f_fine', 0.0)
+                _, _, _, _, _, net_payable, _ = calculate_salary_breakdown(selected_emp[5], fa, ff, selected_emp[3], fp)
+                
+                st.write(f"**Net Payable Amount:** Tk {net_payable:,.2f}")
+                pdf_buf = BytesIO()
+                generate_pdf_bytes(selected_emp, full_month, fa, ff, fp, pdf_buf)
+                pdf_bytes = pdf_buf.getvalue()
+                st.download_button("📥 Download Pay Slip (PDF)", data=pdf_bytes, file_name=f"PaySlip_{selected_emp[0]}.pdf", mime="application/pdf", use_container_width=True)
+            else:
+                st.warning(f"No employees found in '{filter_pay_cat}' category to generate Pay Slip.")
 
         # TAB 2: SEPARATED & CATEGORIZED SALARY SHEET
         with tab2:
             st.markdown(f"### 📋 Salary Sheet Generator for {full_month}")
             
-            # ক্যাটাগরি ফিল্টার করার জন্য ড্রপডাউন (সিলেকশন আলাদা করার জন্য)
             view_cat = st.selectbox("Select Category to Input Attendance", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"])
-            
-            # শুধুমাত্র সিলেক্টেড ক্যাটাগরির লোকদের আলাদা করা
             filtered_rows = [r for r in rows if r[3] == view_cat]
             
             sheet_data = []
             with st.form("bulk_sheet_form"):
-                st.markdown(f"##### Showing Employees for: **{view_cat}**")
+                st.markdown(f"##### Input Attendance Data for: **{view_cat}**")
                 if not filtered_rows:
                     st.warning(f"No employees found in '{view_cat}' category.")
                 else:
@@ -185,31 +223,47 @@ with col2:
                         
                         sheet_data.append({'emp_data': r, 'absent_days': a_d, 'present_days': p_d, 'fine_amount': f_d})
                 
-                submit_sheet = st.form_submit_button(f"📊 Process & View {view_cat} Sheet", use_container_width=True)
+                submit_sheet = st.form_submit_button(f"📊 Process & Preview {view_cat} Sheet", use_container_width=True)
             
-            # প্রসেস করার পর স্ক্রিনে আলাদা টেবিল দেখানো
             if submit_sheet and sheet_data:
-                final_table = []
+                if 'attendance_tracker' not in st.session_state:
+                    st.session_state['attendance_tracker'] = {}
+                
                 for item in sheet_data:
-                    eid, name, desg, cat, dept, s_rate = item['emp_data']
-                    _, _, _, _, ab_cut, net_p, total_earn = calculate_salary_breakdown(s_rate, item['absent_days'], item['fine_amount'], cat, item['present_days'])
-                    final_table.append({
-                        "Employee ID": eid, "Name": name, "Department": dept, "Category": cat, "Designation": desg,
-                        "Base Salary/Rate": s_rate, "Total Earnings": round(total_earn, 2), "Absent Cut": round(ab_cut, 2),
-                        "Fine/Penalty": round(item['fine_amount'], 2), "Net Payable (Tk)": round(net_p, 2)
-                    })
-                df = pd.DataFrame(final_table)
-                st.dataframe(df, use_container_width=True)
+                    eid = item['emp_data'][0]
+                    st.session_state['attendance_tracker'][eid] = {
+                        'absent': item['absent_days'],
+                        'present': item['present_days'],
+                        'fine': item['fine_amount']
+                    }
+                st.success(f"Calculated and saved current inputs for {view_cat} successfully!")
+
+            st.markdown("---")
+            st.markdown("### 👁️ Current Month Attendance Overview (All Database)")
             
-            # 📥 এক্সেল জেনারেটর (এক্সেলে ৪টি আলাদা শিট তৈরি হবে অটোমেটিক)
+            tracker_table = []
+            current_tracker = st.session_state.get('attendance_tracker', {})
+            
+            for r in rows:
+                eid, name, desg, cat, dept, _ = r
+                saved_data = current_tracker.get(eid, {'absent': 0, 'present': 26 if cat == 'Worker (Daily Basis)' else 0, 'fine': 0.0})
+                
+                tracker_table.append({
+                    "ID": eid, "Name": name, "Category": cat, "Department": dept,
+                    "Present Days": saved_data['present'] if cat == 'Worker (Daily Basis)' else "N/A (Fixed)",
+                    "Absent Days": saved_data['absent'] if cat != 'Worker (Daily Basis)' else 0,
+                    "Fine/Penalty (Tk)": saved_data['fine']
+                })
+            
+            if tracker_table:
+                st.dataframe(pd.DataFrame(tracker_table), use_container_width=True)
+
             st.markdown("---")
             st.markdown("##### 📥 Download Full Combined Excel Sheet (Separated by Tabs)")
-            st.info("Click the button below to download the complete monthly report. Managers, Officers, and Workers will be saved in separate tabs inside the same Excel file.")
             
             if st.button("🚀 Prepare & Download Full Excel Report", use_container_width=True, type="primary"):
                 ex_buf = BytesIO()
                 with pd.ExcelWriter(ex_buf, engine='openpyxl') as writer:
-                    # ৪টি ক্যাটাগরির জন্য আলাদা লুপ চালিয়ে আলাদা শিট তৈরি
                     categories_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
                     sheet_names = ["Managers", "Officers", "Workers_Permanent", "Workers_Daily"]
                     
@@ -217,27 +271,25 @@ with col2:
                         cat_employees = [r for r in rows if r[3] == cat_name]
                         cat_table = []
                         for r in cat_employees:
-                            # এখানে ডিফল্ট হাজিরার ভিত্তিতে এক্সেলের ফুল ডাটা রেডি হবে
-                            fa_d = 0
-                            fp_d = 26 if r[3] == 'Worker (Daily Basis)' else 0
-                            _, _, _, _, ab_cut, net_p, total_earn = calculate_salary_breakdown(r[5], fa_d, 0.0, r[3], fp_d)
+                            saved_att = st.session_state.get('attendance_tracker', {}).get(r[0], {
+                                'absent': 0, 'present': 26 if r[3] == 'Worker (Daily Basis)' else 0, 'fine': 0.0
+                            })
+                            _, _, _, _, ab_cut, net_p, total_earn = calculate_salary_breakdown(
+                                r[5], saved_att['absent'], saved_att['fine'], r[3], saved_att['present']
+                            )
                             cat_table.append({
                                 "Employee ID": r[0], "Name": r[1], "Department": r[4], "Category": r[3], "Designation": r[2],
                                 "Base Salary/Rate": r[5], "Total Earnings": round(total_earn, 2), "Absent Cut": round(ab_cut, 2),
-                                "Fine/Penalty": 0.0, "Net Payable (Tk)": round(net_p, 2)
+                                "Fine/Penalty": saved_att['fine'], "Net Payable (Tk)": round(net_p, 2)
                             })
                         
-                        if cat_table:
-                            df_cat = pd.DataFrame(cat_table)
-                        else:
-                            df_cat = pd.DataFrame(columns=["Employee ID", "Name", "Department", "Category", "Designation", "Base Salary/Rate", "Total Earnings", "Absent Cut", "Fine/Penalty", "Net Payable (Tk)"])
-                        
+                        df_cat = pd.DataFrame(cat_table if cat_table else columns=["Employee ID", "Name", "Department", "Category", "Designation", "Base Salary/Rate", "Total Earnings", "Absent Cut", "Fine/Penalty", "Net Payable (Tk)"])
                         df_cat.to_excel(writer, index=False, sheet_name=s_name)
                 
                 st.download_button(
                     label="📥 Download Now", 
                     data=ex_buf.getvalue(), 
-                    file_name=f"RECON_All_Categories_Sheet_{select_m}.xlsx", 
+                    file_name=f"RECON_Payroll_Sheet_{select_m}.xlsx", 
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True
                 )
