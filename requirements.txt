@@ -1,2 +1,5 @@
 pillow
 reportlab
+streamlit
+pandas
+openpyxl
