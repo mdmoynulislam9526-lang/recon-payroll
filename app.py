@@ -28,11 +28,10 @@ def get_db_connection():
 st.title("💼 RECON LABORATORIES LTD - Professional Payroll System")
 st.markdown("---")
 
-col1, col2 = st.columns([1.3, 2])
+col1, col2 = st.columns([1, 2.3])
 
-# --- LEFT SIDE: EMPLOYEE MANAGEMENT ---
+# --- LEFT SIDE: ONLY ADD EMPLOYEE (SAVING SPACE) ---
 with col1:
-    # 1. ADD EMPLOYEE
     st.header("➕ Add New Person")
     with st.form("employee_form", clear_on_submit=True):
         input_id = st.text_input("ID (e.g., RECON-01)")
@@ -45,7 +44,7 @@ with col1:
         designation = st.text_input("Designation")
         salary = st.text_input("Gross Salary / Daily Wage Rate (Tk)")
         
-        if st.form_submit_button("Add to Database"):
+        if st.form_submit_button("Add to Database", use_container_width=True, type="primary"):
             if not (input_id and name and designation and salary):
                 st.error("Please fill all fields!")
             else:
@@ -60,59 +59,7 @@ with col1:
                 except sqlite3.IntegrityError: st.error("This ID already exists!")
                 except ValueError: st.error("Salary must be a number!")
 
-    st.markdown("---")
-    
-    # 2. EDIT EMPLOYEE
-    st.header("📝 Edit Employee Info")
-    conn = get_db_connection()
-    all_rows = conn.cursor().execute("SELECT * FROM employees_final_version").fetchall()
-    conn.close()
-    
-    if all_rows:
-        edit_options = {f"[{r[3]}] {r[0]} - {r[1]}": r for r in all_rows}
-        selected_edit_key = st.selectbox("Select Person to Edit", list(edit_options.keys()))
-        emp_to_edit = edit_options[selected_edit_key]
-        
-        with st.form("edit_employee_form"):
-            edit_name = st.text_input("Edit Name", value=emp_to_edit[1])
-            dept_list = ["Production", "Quality Control", "Development", "Maintenance", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"]
-            edit_dept = st.selectbox("Edit Department", dept_list, index=dept_list.index(emp_to_edit[4]) if emp_to_edit[4] in dept_list else 0)
-            cat_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
-            edit_cat = st.selectbox("Edit Category", cat_list, index=cat_list.index(emp_to_edit[3]) if emp_to_edit[3] in cat_list else 0)
-            edit_desg = st.text_input("Edit Designation", value=emp_to_edit[2])
-            edit_salary = st.text_input("Edit Gross Salary / Daily Rate", value=str(emp_to_edit[5]))
-            
-            if st.form_submit_button("Update Employee Info", use_container_width=True):
-                try:
-                    conn = get_db_connection()
-                    conn.cursor().execute("""
-                        UPDATE employees_final_version 
-                        SET name=?, designation=?, category=?, department=?, salary=? 
-                        WHERE emp_id=?
-                    """, (edit_name, edit_desg, edit_cat, edit_dept, float(edit_salary), emp_to_edit[0]))
-                    conn.commit()
-                    conn.close()
-                    st.success("Employee information updated successfully!")
-                    st.rerun()
-                except ValueError: st.error("Salary must be a number!")
-    else: st.info("No employee available to edit.")
-
-    st.markdown("---")
-    
-    # 3. REMOVE EMPLOYEE
-    st.header("❌ Remove Person")
-    if all_rows:
-        del_options = {f"[{r[3]}] {r[0]} - {r[1]}": r[0] for r in all_rows}
-        selected_del = st.selectbox("Select Person to Remove", list(del_options.keys()))
-        if st.button("Delete Person", type="primary", use_container_width=True):
-            conn = get_db_connection()
-            conn.cursor().execute("DELETE FROM employees_final_version WHERE emp_id = ?", (del_options[selected_del],))
-            conn.commit()
-            conn.close()
-            st.success("Successfully deleted from database!")
-            st.rerun()
-
-# --- RIGHT SIDE: CALCULATIONS, SEARCH & REPORTING ---
+# --- RIGHT SIDE: ALL MANAGEMENT, SEARCH & PAYROLL ---
 with col2:
     st.header("📋 Payroll Calculation & Reports")
     conn = get_db_connection()
@@ -125,21 +72,99 @@ with col2:
         select_y = st.selectbox("Select Year", [str(y) for y in range(2024, 2031)], index=2)
         full_month = f"{select_m}, {select_y}"
         
-        tab0, tab1, tab2 = st.tabs(["🔍 Search Employee", "📄 Individual Pay Slip", "📊 Categorized Salary Sheet"])
+        # ৪টি অপ্টিমাইজড ট্যাব সাজানো হয়েছে
+        tab_emp, tab0, tab1, tab2 = st.tabs(["👥 All Employees", "🔍 Search Employee", "📄 Individual Pay Slip", "📊 Categorized Salary Sheet"])
         
+        # 🆕 TAB: ALL EMPLOYEES DIRECT MANAGEMENT (প্রতি নামের পাশে Edit / Delete)
+        with tab_emp:
+            st.markdown("### 👥 Manage Employees Directly")
+            st.info("Here is your full staff list. You can edit information or remove anyone directly from their section below.")
+            
+            for r in rows:
+                eid, ename, edesg, ecat, edept, esalary = r
+                
+                # প্রতিজন কর্মচারীর জন্য একটি করে সুন্দর রো বা বক্স কার্ড
+                with st.container():
+                    col_info, col_act1, col_act2 = st.columns([3, 0.6, 0.6])
+                    
+                    with col_info:
+                        st.markdown(f"**[{eid}] {ename}** — {edesg} ({edept}) | Category: *{ecat}* | Salary/Rate: Tk {esalary:,.2f}")
+                    
+                    # 📝 EDIT ACTION Button
+                    with col_act1:
+                        if st.button("Edit 📝", key=f"btn_edit_{eid}", use_container_width=True):
+                            st.session_state[f"edit_mode_{eid}"] = True
+                    
+                    # ❌ REMOVE ACTION Button
+                    with col_act2:
+                        if st.button("Delete ❌", key=f"btn_del_{eid}", use_container_width=True, type="secondary"):
+                            st.session_state[f"del_mode_{eid}"] = True
+                    
+                    # 🛠️ এডিট মোড চালু হলে ঠিক নামের নিচেই ইনপুট বক্স ওপেন হবে (কোনো এক্সট্রা স্পেস নষ্ট না করে)
+                    if st.session_state.get(f"edit_mode_{eid}", False):
+                        with st.form(key=f"inline_edit_form_{eid}"):
+                            st.markdown(f"##### 📝 Editing Profile of: {ename} ({eid})")
+                            ch_name = st.text_input("Edit Name", value=ename)
+                            
+                            dept_list = ["Production", "Quality Control", "Development", "Maintenance", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"]
+                            ch_dept = st.selectbox("Edit Department", dept_list, index=dept_list.index(edept) if edept in dept_list else 0)
+                            
+                            cat_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
+                            ch_cat = st.selectbox("Edit Category", cat_list, index=cat_list.index(ecat) if ecat in cat_list else 0)
+                            
+                            ch_desg = st.text_input("Edit Designation", value=edesg)
+                            ch_salary = st.text_input("Edit Salary/Rate", value=str(esalary))
+                            
+                            btn_col1, btn_col2 = st.columns(2)
+                            with btn_col1:
+                                if st.form_submit_button("Save Changes", use_container_width=True):
+                                    try:
+                                        conn = get_db_connection()
+                                        conn.cursor().execute("""
+                                            UPDATE employees_final_version 
+                                            SET name=?, designation=?, category=?, department=?, salary=? 
+                                            WHERE emp_id=?
+                                        """, (ch_name, ch_desg, ch_cat, ch_dept, float(ch_salary), eid))
+                                        conn.commit()
+                                        conn.close()
+                                        st.session_state[f"edit_mode_{eid}"] = False
+                                        st.success("Updated successfully!")
+                                        st.rerun()
+                                    except ValueError: st.error("Salary must be a number!")
+                            with btn_col2:
+                                if st.form_submit_button("Cancel", use_container_width=True):
+                                    st.session_state[f"edit_mode_{eid}"] = False
+                                    st.rerun()
+
+                    # 🛠️ ডিলিট কনফার্মেশন মোড (ভুল করে ক্লিক লাগলে যেন ডিলিট না হয়ে যায়)
+                    if st.session_state.get(f"del_mode_{eid}", False):
+                        st.warning(f"Are you sure you want to completely remove **{ename} ({eid})**?")
+                        dc1, dc2 = st.columns(2)
+                        with dc1:
+                            if st.button("Yes, Confirm Delete", key=f"conf_del_{eid}", type="primary", use_container_width=True):
+                                conn = get_db_connection()
+                                conn.cursor().execute("DELETE FROM employees_final_version WHERE emp_id = ?", (eid,))
+                                conn.commit()
+                                conn.close()
+                                st.session_state[f"del_mode_{eid}"] = False
+                                st.success("Employee removed successfully!")
+                                st.rerun()
+                        with dc2:
+                            if st.button("Cancel Delete", key=f"cancel_del_{eid}", use_container_width=True):
+                                st.session_state[f"del_mode_{eid}"] = False
+                                st.rerun()
+                                
+                    st.markdown("<hr style='margin:6px 0px; border-color:#eee;'>", unsafe_allow_html=True)
+
         # TAB 0: SEARCH FEATURE
         with tab0:
             st.markdown("### 🔍 Live Employee Directory Search")
-            search_query = st.text_input("Enter Employee ID or Name to search", placeholder="Type here... (e.g., RECON-01 or Satter)")
+            search_query = st.text_input("Enter Employee ID or Name to search", placeholder="Type here...")
             
             if search_query:
-                search_results = [
-                    r for r in rows 
-                    if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()
-                ]
-                
+                search_results = [r for r in rows if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()]
                 if search_results:
-                    st.success(f"Found {len(search_results)} employee(s) matching your search:")
+                    st.success(f"Found {len(search_results)} employee(s):")
                     for emp in search_results:
                         eid, ename, edesg, ecat, edept, esalary = emp
                         with st.container():
@@ -152,10 +177,8 @@ with col2:
                                 st.write(f"**Category:** {ecat}")
                                 st.write(f"**Base Salary/Rate:** Tk {esalary:,.2f}")
                             st.markdown("<hr style='margin:10px 0px; border-color:#ddd;'>", unsafe_allow_html=True)
-                else:
-                    st.error("No employee found with that ID or Name.")
-            else:
-                st.info("Please type an ID or Name above to see full details instantly.")
+                else: st.error("No employee found.")
+            else: st.info("Please type an ID or Name above to see full details instantly.")
 
         # TAB 1: INDIVIDUAL PAY SLIP
         with tab1:
@@ -188,21 +211,18 @@ with col2:
                 generate_pdf_bytes(selected_emp, full_month, fa, ff, fp, pdf_buf)
                 pdf_bytes = pdf_buf.getvalue()
                 st.download_button("📥 Download Pay Slip (PDF)", data=pdf_bytes, file_name=f"PaySlip_{selected_emp[0]}.pdf", mime="application/pdf", use_container_width=True)
-            else:
-                st.warning(f"No employees found in '{filter_pay_cat}' category to generate Pay Slip.")
+            else: st.warning(f"No employees found in '{filter_pay_cat}' category.")
 
         # TAB 2: SEPARATED & CATEGORIZED SALARY SHEET
         with tab2:
             st.markdown(f"### 📋 Salary Sheet Generator for {full_month}")
-            
             view_cat = st.selectbox("Select Category to Input Attendance", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"])
             filtered_rows = [r for r in rows if r[3] == view_cat]
             
             sheet_data = []
             with st.form("bulk_sheet_form"):
                 st.markdown(f"##### Input Attendance Data for: **{view_cat}**")
-                if not filtered_rows:
-                    st.warning(f"No employees found in '{view_cat}' category.")
+                if not filtered_rows: st.warning(f"No employees found in '{view_cat}' category.")
                 else:
                     for r in filtered_rows:
                         st.markdown(f"**🔹 [{r[4]}] {r[0]} - {r[1]}** ({r[2]})")
@@ -214,49 +234,36 @@ with col2:
                             else:
                                 a_d = st.number_input(f"Absent Days", 0, 26, 0, key=f"a_{r[0]}")
                                 p_d = 0
-                        with col_in2: 
-                            f_d = st.number_input(f"Penalty/Fine (Tk)", 0.0, value=0.0, key=f"f_{r[0]}")
-                        
+                        with col_in2: f_d = st.number_input(f"Penalty/Fine (Tk)", 0.0, value=0.0, key=f"f_{r[0]}")
                         sheet_data.append({'emp_data': r, 'absent_days': a_d, 'present_days': p_d, 'fine_amount': f_d})
                 
                 submit_sheet = st.form_submit_button(f"📊 Process & Preview {view_cat} Sheet", use_container_width=True)
             
             if submit_sheet and sheet_data:
-                if 'attendance_tracker' not in st.session_state:
-                    st.session_state['attendance_tracker'] = {}
-                
+                if 'attendance_tracker' not in st.session_state: st.session_state['attendance_tracker'] = {}
                 for item in sheet_data:
                     eid = item['emp_data'][0]
-                    st.session_state['attendance_tracker'][eid] = {
-                        'absent': item['absent_days'],
-                        'present': item['present_days'],
-                        'fine': item['fine_amount']
-                    }
+                    st.session_state['attendance_tracker'][eid] = {'absent': item['absent_days'], 'present': item['present_days'], 'fine': item['fine_amount']}
                 st.success(f"Calculated and saved current inputs for {view_cat} successfully!")
 
             st.markdown("---")
             st.markdown("### 👁️ Current Month Attendance Overview (All Database)")
-            
             tracker_table = []
             current_tracker = st.session_state.get('attendance_tracker', {})
             
             for r in rows:
                 eid, name, desg, cat, dept, _ = r
                 saved_data = current_tracker.get(eid, {'absent': 0, 'present': 26 if cat == 'Worker (Daily Basis)' else 0, 'fine': 0.0})
-                
                 tracker_table.append({
                     "ID": eid, "Name": name, "Category": cat, "Department": dept,
                     "Present Days": saved_data['present'] if cat == 'Worker (Daily Basis)' else "N/A (Fixed)",
                     "Absent Days": saved_data['absent'] if cat != 'Worker (Daily Basis)' else 0,
                     "Fine/Penalty (Tk)": saved_data['fine']
                 })
-            
-            if tracker_table:
-                st.dataframe(pd.DataFrame(tracker_table), use_container_width=True)
+            if tracker_table: st.dataframe(pd.DataFrame(tracker_table), use_container_width=True)
 
             st.markdown("---")
             st.markdown("##### 📥 Download Full Combined Excel Sheet (Separated by Tabs)")
-            
             if st.button("🚀 Prepare & Download Full Excel Report", use_container_width=True, type="primary"):
                 ex_buf = BytesIO()
                 with pd.ExcelWriter(ex_buf, engine='openpyxl') as writer:
@@ -267,31 +274,15 @@ with col2:
                         cat_employees = [r for r in rows if r[3] == cat_name]
                         cat_table = []
                         for r in cat_employees:
-                            saved_att = st.session_state.get('attendance_tracker', {}).get(r[0], {
-                                'absent': 0, 'present': 26 if r[3] == 'Worker (Daily Basis)' else 0, 'fine': 0.0
-                            })
-                            _, _, _, _, ab_cut, net_p, total_earn = calculate_salary_breakdown(
-                                r[5], saved_att['absent'], saved_att['fine'], r[3], saved_att['present']
-                            )
+                            saved_att = st.session_state.get('attendance_tracker', {}).get(r[0], {'absent': 0, 'present': 26 if r[3] == 'Worker (Daily Basis)' else 0, 'fine': 0.0})
+                            _, _, _, _, ab_cut, net_p, total_earn = calculate_salary_breakdown(r[5], saved_att['absent'], saved_att['fine'], r[3], saved_att['present'])
                             cat_table.append({
                                 "Employee ID": r[0], "Name": r[1], "Department": r[4], "Category": r[3], "Designation": r[2],
                                 "Base Salary/Rate": r[5], "Total Earnings": round(total_earn, 2), "Absent Cut": round(ab_cut, 2),
                                 "Fine/Penalty": saved_att['fine'], "Net Payable (Tk)": round(net_p, 2)
                             })
-                        
-                        # 🛠️ সংশোধন (Line 286): এখানে pd.DataFrame তৈরির ভুলটি ঠিক করা হয়েছে
-                        if cat_table:
-                            df_cat = pd.DataFrame(cat_table)
-                        else:
-                            df_cat = pd.DataFrame(columns=["Employee ID", "Name", "Department", "Category", "Designation", "Base Salary/Rate", "Total Earnings", "Absent Cut", "Fine/Penalty", "Net Payable (Tk)"])
-                        
+                        df_cat = pd.DataFrame(cat_table) if cat_table else pd.DataFrame(columns=["Employee ID", "Name", "Department", "Category", "Designation", "Base Salary/Rate", "Total Earnings", "Absent Cut", "Fine/Penalty", "Net Payable (Tk)"])
                         df_cat.to_excel(writer, index=False, sheet_name=s_name)
                 
-                st.download_button(
-                    label="📥 Download Now", 
-                    data=ex_buf.getvalue(), 
-                    file_name=f"RECON_Payroll_Sheet_{select_m}.xlsx", 
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
+                st.download_button(label="📥 Download Now", data=ex_buf.getvalue(), file_name=f"RECON_Payroll_Sheet_{select_m}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
     else: st.info("Database is empty. Please add people from the left panel.")
