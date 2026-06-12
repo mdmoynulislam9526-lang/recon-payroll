@@ -1,3 +1,11 @@
+আপনার এই আইডিয়াটাও দারুণ! এখন প্রতিবার পে-স্লিপ বের করার জন্য প্রথমে ক্যাটাগরি ফিল্টার করে তারপর ড্রপডাউন থেকে নাম খোঁজাটা আসলেই একটু সময়সাপেক্ষ। যদি "Individual Pay Slip" ট্যাবের ভেতরেই সরাসরি নাম বা আইডি দিয়ে সার্চ করে পে-স্লিপ বের করা যায়, তবে কাজটা অনেক সহজ হয়ে যাবে।
+
+আমি কোডটি সেভাবে আপডেট করে দিয়েছি। এখন Individual Pay Slip ট্যাবে ক্যাটাগরি ফিল্টারের ঝামেলা পুরো বাদ দেওয়া হয়েছে। সেখানে সরাসরি একটি সার্চ বক্স থাকবে, যেখানে নাম বা আইডি টাইপ করলেই কর্মচারীর প্রোফাইল চলে আসবে এবং তার নিচে অনুপস্থিতি বা জরিমানা বসিয়ে এক ক্লিকেই PDF ডাউনলোড করে নেওয়া যাবে।
+
+🛠️ সমাধান: app.py ফাইলের সম্পূর্ণ কোডটি এটি দিয়ে পরিবর্তন করুন:
+গিটহাবে গিয়ে আপনার আগের সব কোড মুছে এই আপডেট করা কোডটি পেস্ট করে Commit changes করে দিন:
+
+Python
 import streamlit as st
 import sqlite3
 from datetime import datetime
@@ -170,7 +178,7 @@ with col2:
         # TAB 2: SEARCH FEATURE
         with tab0:
             st.markdown("### 🔍 Live Search & Quick Action")
-            search_query = st.text_input("Enter Employee ID or Name to search", placeholder="Type here...")
+            search_query = st.text_input("Enter Employee ID or Name to search", placeholder="Type here...", key="search_tab_input")
             if search_query:
                 search_results = [r for r in rows if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()]
                 if search_results:
@@ -181,38 +189,64 @@ with col2:
                 else: st.error("No employee found with that ID or Name.")
             else: st.info("Type an ID or Name above to instantly check details, edit or remove.")
 
-        # TAB 3: INDIVIDUAL PAY SLIP
+        # 📄 TAB 3: INDIVIDUAL PAY SLIP (NOW POWERED WITH LIVE SEARCH!)
         with tab1:
-            st.markdown("##### 🔍 Filter Employee by Category first")
-            filter_pay_cat = st.selectbox("Filter Category for Pay Slip", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="pay_cat_filter")
-            filtered_pay_rows = [r for r in rows if r[3] == filter_pay_cat]
+            st.markdown("### 🔍 Search Employee for Pay Slip")
+            pay_search = st.text_input("Enter Employee ID or Name to generate pay slip", placeholder="e.g., RECON-01 or Satter", key="pay_slip_search_input")
             
-            if filtered_pay_rows:
-                emp_options = {f"{r[0]} - {r[1]} ({r[2]})": r for r in filtered_pay_rows}
-                selected_emp = emp_options[st.selectbox("Select Person", list(emp_options.keys()), key="pay_emp_select")]
+            if pay_search:
+                pay_results = [r for r in rows if pay_search.lower() in r[0].lower() or pay_search.lower() in r[1].lower()]
                 
-                with st.form("calculation_form"):
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        if selected_emp[3] == 'Worker (Daily Basis)':
-                            p_days = st.number_input("Total Present Days", 0, 31, 26, key="ind_p")
-                            a_days = 0
-                        else:
-                            a_days = st.number_input("Absent Days", 0, 26, 0, key="ind_a")
-                            p_days = 0
-                    with c2: f_amt = st.number_input("Fine / Penalty (Tk)", 0.0, value=0.0, step=10.0, key="ind_f")
-                    if st.form_submit_button("🔄 Calculate Slip"):
-                        st.session_state['f_abs'], st.session_state['f_pres'], st.session_state['f_fine'] = a_days, p_days, f_amt
+                if pay_results:
+                    if len(pay_results) > 1:
+                        st.info(f"Multiple matches found ({len(pay_results)}). Please select the correct person below:")
+                        emp_options = {f"[{r[3]}] {r[0]} - {r[1]} ({r[2]})": r for r in pay_results}
+                        selected_emp = emp_options[st.selectbox("Select Person", list(emp_options.keys()), key="pay_slip_multiple_select")]
+                    else:
+                        selected_emp = pay_results[0]
+                        st.success(f"Selected: **{selected_emp[1]} ({selected_emp[0]})** — *{selected_emp[3]}*")
+                    
+                    # নির্বাচিত কর্মচারীর পে-স্লিপ ফর্ম
+                    with st.form("calculation_form_search"):
+                        st.markdown(f"##### Calculate Pay Slip for **{selected_emp[1]}** ({full_month})")
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            if selected_emp[3] == 'Worker (Daily Basis)':
+                                p_days = st.number_input("Total Present Days", 0, 31, 26, key="ind_p_search")
+                                a_days = 0
+                            else:
+                                a_days = st.number_input("Absent Days", 0, 26, 0, key="ind_a_search")
+                                p_days = 0
+                        with c2: 
+                            f_amt = st.number_input("Fine / Penalty (Tk)", 0.0, value=0.0, step=10.0, key="ind_f_search")
+                        
+                        if st.form_submit_button("🔄 Calculate Slip", use_container_width=True):
+                            st.session_state['s_abs'], st.session_state['s_pres'], st.session_state['s_fine'] = a_days, p_days, f_amt
 
-                fa, fp, ff = st.session_state.get('f_abs', 0), st.session_state.get('f_pres', 26 if selected_emp[3] == 'Worker (Daily Basis)' else 0), st.session_state.get('f_fine', 0.0)
-                _, _, _, _, _, net_payable, _ = calculate_salary_breakdown(selected_emp[5], fa, ff, selected_emp[3], fp)
-                
-                st.write(f"**Net Payable Amount:** Tk {net_payable:,.2f}")
-                pdf_buf = BytesIO()
-                generate_pdf_bytes(selected_emp, full_month, fa, ff, fp, pdf_buf)
-                pdf_bytes = pdf_buf.getvalue()
-                st.download_button("📥 Download Pay Slip (PDF)", data=pdf_bytes, file_name=f"PaySlip_{selected_emp[0]}.pdf", mime="application/pdf", use_container_width=True)
-            else: st.warning(f"No employees found in '{filter_pay_cat}' category.")
+                    # হিসেব ও ডাউনলোড বাটন
+                    sa = st.session_state.get('s_abs', 0)
+                    sp = st.session_state.get('s_pres', 26 if selected_emp[3] == 'Worker (Daily Basis)' else 0)
+                    sf = st.session_state.get('s_fine', 0.0)
+                    
+                    _, _, _, _, _, net_payable, _ = calculate_salary_breakdown(selected_emp[5], sa, sf, selected_emp[3], sp)
+                    
+                    st.markdown(f"#### **Net Payable Amount:** Tk {net_payable:,.2f}")
+                    
+                    pdf_buf = BytesIO()
+                    generate_pdf_bytes(selected_emp, full_month, sa, sf, sp, pdf_buf)
+                    pdf_bytes = pdf_buf.getvalue()
+                    st.download_button(
+                        "📥 Download Pay Slip (PDF)", 
+                        data=pdf_bytes, 
+                        file_name=f"PaySlip_{selected_emp[0]}_{select_m}.pdf", 
+                        mime="application/pdf", 
+                        use_container_width=True,
+                        type="primary"
+                    )
+                else:
+                    st.error("No employee found matching your input.")
+            else:
+                st.info("Type an Employee ID or Name above to quickly load their details and download the PDF pay slip.")
 
         # TAB 4: SEPARATED & CATEGORIZED SALARY SHEET
         with tab2:
@@ -247,10 +281,8 @@ with col2:
                     st.session_state['attendance_tracker'][eid] = {'absent': item['absent_days'], 'present': item['present_days'], 'fine': item['fine_amount']}
                 st.success(f"Calculated and saved current inputs for {view_cat} successfully!")
 
-            # 🛠️ নতুন আপডেট: এখন লাইভ টেবিলে নেট সেলারি (Net Salary) হিসাব হয়ে দেখাবে 🛠️
             st.markdown("---")
             st.markdown("### 👁️ Current Month Attendance & Net Salary Overview (All Database)")
-            st.caption("This table reflects basic data along with dynamically calculated Net Salary based on saved attendance for this session.")
             
             tracker_table = []
             current_tracker = st.session_state.get('attendance_tracker', {})
@@ -259,25 +291,19 @@ with col2:
                 eid, name, desg, cat, dept, base_sal = r
                 saved_data = current_tracker.get(eid, {'absent': 0, 'present': 26 if cat == 'Worker (Daily Basis)' else 0, 'fine': 0.0})
                 
-                # টেবিলের জন্য লাইভ স্যালারি ক্যালকুলেশন কল করা হলো
                 _, _, _, _, ab_cut, net_p, _ = calculate_salary_breakdown(
                     base_sal, saved_data['absent'], saved_data['fine'], cat, saved_data['present']
                 )
                 
                 tracker_table.append({
-                    "ID": eid, 
-                    "Name": name, 
-                    "Category": cat, 
-                    "Base Salary/Rate": f"Tk {base_sal:,.2f}",
+                    "ID": eid, "Name": name, "Category": cat, "Base Salary/Rate": f"Tk {base_sal:,.2f}",
                     "Present Days": saved_data['present'] if cat == 'Worker (Daily Basis)' else "N/A (Fixed)",
                     "Absent Days": saved_data['absent'] if cat != 'Worker (Daily Basis)' else 0,
-                    "Absent Cut (Tk)": f"Tk {ab_cut:,.2f}",
-                    "Fine/Penalty (Tk)": f"Tk {saved_data['fine']:,.2f}",
-                    "Net Salary (Tk)": f"Tk {net_p:,.2f}" # 🔥 এখন টেবিলেই নেট সেলারি দেখা যাবে!
+                    "Absent Cut (Tk)": f"Tk {ab_cut:,.2f}", "Fine/Penalty (Tk)": f"Tk {saved_data['fine']:,.2f}",
+                    "Net Salary (Tk)": f"Tk {net_p:,.2f}"
                 })
                 
-            if tracker_table: 
-                st.dataframe(pd.DataFrame(tracker_table), use_container_width=True)
+            if tracker_table: st.dataframe(pd.DataFrame(tracker_table), use_container_width=True)
 
             st.markdown("---")
             st.markdown("##### 📥 Download Full Combined Excel Sheet (Separated by Tabs)")
