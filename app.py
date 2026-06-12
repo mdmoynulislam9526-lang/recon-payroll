@@ -154,7 +154,7 @@ with col2:
         month_num = months_list.index(select_m) + 1
         days_in_month = calendar.monthrange(int(select_y), month_num)[1]
         
-        tab_emp, tab0, tab1, tab2 = st.tabs(["👥 All Employees", "🔍 Search Employee", "📄 Individual Pay Slip", "📊 Categorized Salary Sheet"])
+        tab_emp, tab0, tab1, tab2 = st.tabs(["👥 All Employees", "🔍 Search Employee", "📄 Individual Pay Slip", "📊 Categorized Attendance Entry"])
         
         # TAB 1: ALL EMPLOYEES
         with tab_emp:
@@ -212,7 +212,6 @@ with col2:
                                 p_days = st.number_input("Total Present Days", 0, days_in_month, days_in_month, key="ind_p_search")
                                 a_days = 0
                             else:
-                                # 🆕 পার্মানেন্টদের ক্ষেত্রে প্রেজেন্ট দিন এবং এবসেন্ট দিন দুটোই ইচ্ছেমতো বসানোর ব্যবস্থা
                                 p_days = st.number_input("Total Present/Duty Days (Base)", 0, 26, 26, key="ind_p_search_fixed")
                                 a_days = st.number_input("Absent Days", 0, 26, 0, key="ind_a_search")
                         with c2: 
@@ -222,11 +221,9 @@ with col2:
                             st.session_state['s_abs'], st.session_state['s_pres'], st.session_state['s_fine'] = a_days, p_days, f_amt
 
                     sa = st.session_state.get('s_abs', 0)
-                    # পার্মানেন্ট হলে ক্যালকুলেশন মডিউলে প্রেজেন্ট ডে পাঠানোর প্রয়োজন নেই কারণ তাদের বেস ফিক্সড, তবে হিসাব ট্র্যাকিং এর জন্য রাখা হলো
                     sp = st.session_state.get('s_pres', days_in_month if selected_emp[3] == 'Worker (Daily Basis)' else 26)
                     sf = st.session_state.get('s_fine', 0.0)
                     
-                    # যদি পার্মানেন্ট স্টাফের প্রেজেন্ট দিন ২৬ থেকে কমানো হয়, তবে বেস স্যালারি সেই অনুপাতে সামঞ্জস্য হবে
                     current_salary = selected_emp[5]
                     if selected_emp[3] != 'Worker (Daily Basis)' and sp < 26:
                         current_salary = (selected_emp[5] / 26) * sp
@@ -236,7 +233,6 @@ with col2:
                     st.markdown(f"#### **Net Payable Amount:** Tk {net_payable:,.2f}")
                     
                     pdf_buf = BytesIO()
-                    # পিডিএফ জেনারেটরের সুবিধার্থে কাস্টমাইজড স্যালারি পাঠানো হচ্ছে
                     generate_pdf_bytes((selected_emp[0], selected_emp[1], selected_emp[2], selected_emp[3], selected_emp[4], current_salary), full_month, sa, sf, sp, pdf_buf)
                     pdf_bytes = pdf_buf.getvalue()
                     st.download_button(
@@ -250,39 +246,73 @@ with col2:
                 else: st.error("No employee found matching your input.")
             else: st.info("Type an Employee ID or Name above to quickly load their details and download the PDF pay slip.")
 
-        # TAB 4: SEPARATED & CATEGORIZED SALARY SHEET
+        # TAB 4: 🆕 লাইভ সার্চ ভিত্তিক হাজিরা ইনপুট ফর্ম (ক্যাটাগরি ওয়াইজ)
         with tab2:
-            st.markdown(f"### 📋 Salary Sheet Generator for {full_month}")
-            view_cat = st.selectbox("Select Category to Input Attendance", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"])
+            st.markdown(f"### 📋 Attendance & Salary Processor ({full_month})")
+            
+            view_cat = st.selectbox("Select Category", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
             filtered_rows = [r for r in rows if r[3] == view_cat]
             
+            st.markdown("---")
+            # 🆕 এখানে সার্চ ইনপুট বক্স যোগ করা হলো
+            search_emp_input = st.text_input(f"🔍 Search Employee within **{view_cat}**", placeholder="Type Name or ID to filter...", key=f"search_box_{view_cat}")
+            
+            # সার্চের ওপর ভিত্তি করে লিস্ট ফিল্টার করা হচ্ছে
+            if search_emp_input:
+                final_display_rows = [r for r in filtered_rows if search_emp_input.lower() in r[0].lower() or search_emp_input.lower() in r[1].lower()]
+            else:
+                final_display_rows = filtered_rows
+
             sheet_data = []
-            with st.form("bulk_sheet_form"):
-                st.markdown(f"##### Input Attendance Data for: **{view_cat}**")
-                if not filtered_rows: st.warning(f"No employees found in '{view_cat}' category.")
+            
+            if 'attendance_tracker' not in st.session_state: 
+                st.session_state['attendance_tracker'] = {}
+                
+            if not final_display_rows:
+                if search_emp_input:
+                    st.warning("No employees match your search query in this category.")
                 else:
-                    for r in filtered_rows:
+                    st.warning(f"No employees found registered under '{view_cat}'.")
+            else:
+                # ফর্মের মাধ্যমে ডাটা সাবমিট করা
+                with st.form("bulk_sheet_form_v2"):
+                    st.markdown(f"##### 📝 Filling Attendance for {len(final_display_rows)} Person(s)")
+                    
+                    for r in final_display_rows:
                         st.markdown(f"**🔹 [{r[4]}] {r[0]} - {r[1]}** ({r[2]})")
                         col_in1, col_in2 = st.columns(2)
+                        
+                        # সেশন স্টেট থেকে আগের ডাটা থাকলে তা তুলে আনা, না থাকলে ডিফল্ট সেট করা
+                        saved_attendance = st.session_state['attendance_tracker'].get(r[0], None)
+                        
+                        if r[3] == 'Worker (Daily Basis)':
+                            def_p = saved_attendance['present'] if saved_attendance else days_in_month
+                            def_a = 0
+                        else:
+                            def_p = saved_attendance['present'] if saved_attendance else 26
+                            def_a = saved_attendance['absent'] if saved_attendance else 0
+                        def_f = saved_attendance['fine'] if saved_attendance else 0.0
+                        
                         with col_in1:
                             if r[3] == 'Worker (Daily Basis)':
-                                p_d = st.number_input(f"Present Days", 0, days_in_month, days_in_month, key=f"p_{r[0]}")
+                                p_d = st.number_input(f"Present Days", 0, days_in_month, def_p, key=f"p_{r[0]}")
                                 a_d = 0
                             else:
-                                # 🆕 বাল্ক ইনপুট ফর্মেও স্থায়ী স্টাফদের জন্য প্রেজেন্ট ও এবসেন্ট দুটোই বসানোর ব্যবস্থা করা হলো
-                                p_d = st.number_input(f"Present/Duty Days", 0, 26, 26, key=f"p_{r[0]}")
-                                a_d = st.number_input(f"Absent Days", 0, 26, 0, key=f"a_{r[0]}")
-                        with col_in2: f_d = st.number_input(f"Penalty/Fine (Tk)", 0.0, value=0.0, key=f"f_{r[0]}")
+                                p_d = st.number_input(f"Present/Duty Days", 0, 26, def_p, key=f"p_{r[0]}")
+                                a_d = st.number_input(f"Absent Days", 0, 26, def_a, key=f"a_{r[0]}")
+                        with col_in2: 
+                            f_d = st.number_input(f"Penalty/Fine (Tk)", 0.0, value=float(def_f), key=f"f_{r[0]}")
+                            
                         sheet_data.append({'emp_data': r, 'absent_days': a_d, 'present_days': p_d, 'fine_amount': f_d})
+                    
+                    submit_sheet = st.form_submit_button(f"💾 Save Entry", use_container_width=True, type="primary")
                 
-                submit_sheet = st.form_submit_button(f"📊 Process & Preview {view_cat} Sheet", use_container_width=True)
-            
-            if submit_sheet and sheet_data:
-                if 'attendance_tracker' not in st.session_state: st.session_state['attendance_tracker'] = {}
-                for item in sheet_data:
-                    eid = item['emp_data'][0]
-                    st.session_state['attendance_tracker'][eid] = {'absent': item['absent_days'], 'present': item['present_days'], 'fine': item['fine_amount']}
-                st.success(f"Calculated and saved current inputs for {view_cat} successfully!")
+                if submit_sheet and sheet_data:
+                    for item in sheet_data:
+                        eid = item['emp_data'][0]
+                        st.session_state['attendance_tracker'][eid] = {'absent': item['absent_days'], 'present': item['present_days'], 'fine': item['fine_amount']}
+                    st.success("Attendance saved successfully! Check the overview table below.")
+                    st.rerun()
 
             st.markdown("---")
             st.markdown("### 👁️ Current Month Attendance & Net Salary Overview (Separated Categories)")
@@ -306,7 +336,6 @@ with col2:
                         else:
                             saved_data = {'absent': 0, 'present': 26, 'fine': 0.0}
                     
-                    # যদি স্থায়ী স্টাফের প্রেজেন্ট দিন ২৬ থেকে কম হয় তবে বেস স্যালারি রেশিও অনুযায়ী কমবে
                     calc_salary = base_sal
                     if cat != 'Worker (Daily Basis)' and saved_data['present'] < 26:
                         calc_salary = (base_sal / 26) * saved_data['present']
@@ -329,7 +358,7 @@ with col2:
 
             st.markdown("---")
             st.markdown("##### 📥 Download Full Combined Excel Sheet (Separated by Tabs)")
-            if st.button("🚀 Prepare & Download Full Excel Report", use_container_width=True, type="primary"):
+            if st.button("🚀 Prepare & Download Full Excel Report", use_container_width=True):
                 ex_buf = BytesIO()
                 with pd.ExcelWriter(ex_buf, engine='openpyxl') as writer:
                     sheet_names = ["Managers", "Officers", "Workers_Permanent", "Workers_Daily"]
