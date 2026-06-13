@@ -41,21 +41,24 @@ col1, col2 = st.columns([1, 2.3])
 # --- LEFT SIDE: ADD EMPLOYEE ---
 with col1:
     st.header("➕ Add New Person")
-    if "form_id" not in st.session_state: st.session_state.form_id = ""
-    if "form_name" not in st.session_state: st.session_state.form_name = ""
-    if "form_desg" not in st.session_state: st.session_state.form_desg = ""
-    if "form_salary" not in st.session_state: st.session_state.form_salary = ""
+    
+    # ফর্মের ইনপুটগুলো খালি রাখার জন্য সেশন স্টেট চেক
+    if "emp_id_input" not in st.session_state: st.session_state.emp_id_input = ""
+    if "name_input" not in st.session_state: st.session_state.name_input = ""
+    if "desg_input" not in st.session_state: st.session_state.desg_input = ""
+    if "salary_input" not in st.session_state: st.session_state.salary_input = ""
 
-    with st.form("employee_form", clear_on_submit=False):
-        input_id = st.text_input("ID (e.g., RECON-01)", value=st.session_state.form_id)
-        name = st.text_input("Name", value=st.session_state.form_name)
+    # ফর্মের সাথে একটি কাস্টম key যুক্ত করা হয়েছে যাতে ফর্ম রিসেট করা যায়
+    with st.form("employee_form", clear_on_submit=True):
+        input_id = st.text_input("ID (e.g., RECON-01)", key="emp_id_input")
+        name = st.text_input("Name", key="name_input")
         department = st.selectbox("Select Department", [
             "Production", "Quality Control", "Development",
             "Maintenance", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"
         ])
         category = st.selectbox("Select Category", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"])
-        designation = st.text_input("Designation", value=st.session_state.form_desg)
-        salary = st.text_input("Gross Salary / Daily Wage Rate (Tk)", value=st.session_state.form_salary)
+        designation = st.text_input("Designation", key="desg_input")
+        salary = st.text_input("Gross Salary / Daily Wage Rate (Tk)", key="salary_input")
         
         if st.form_submit_button("Add to Database", use_container_width=True, type="primary"):
             if not (input_id and name and designation and salary):
@@ -67,11 +70,19 @@ with col1:
                                    (input_id, name, designation, category, department, float(salary)))
                     conn.commit()
                     conn.close()
+                    
                     st.success(f"{name} successfully added!")
-                    st.session_state.form_id, st.session_state.form_name, st.session_state.form_desg, st.session_state.form_salary = "", "", "", ""
+                    
+                    # 🆕 ডাটাবেজে সেভ হওয়ার পর ফর্মের ভেতরের সব বক্স জোরপূর্বক খালি (Reset) করার লজিক
+                    st.session_state.emp_id_input = ""
+                    st.session_state.name_input = ""
+                    st.session_state.desg_input = ""
+                    st.session_state.salary_input = ""
+                    
+                    # অ্যাপ রিরান করে নতুন খালি ফর্ম দেখানো
                     st.rerun()
+                    
                 except sqlite3.IntegrityError:
-                    st.session_state.form_id, st.session_state.form_name, st.session_state.form_desg, st.session_state.form_salary = input_id, name, designation, salary
                     st.error(f"⚠️ Warning: Employee ID '{input_id}' already exists!")
                 except ValueError: 
                     st.error("Salary must be a number!")
