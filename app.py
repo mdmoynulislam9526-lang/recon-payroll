@@ -4,6 +4,7 @@ from datetime import datetime
 import calendar
 from io import BytesIO
 import pandas as pd
+import re  # আইডি ফরম্যাট চেক করার জন্য রেগুলার এক্সপ্রেশন লাইব্রেরি
 from calculations import calculate_salary_breakdown, generate_pdf_bytes
 
 st.set_page_config(page_title="RECON Payroll System", layout="wide", page_icon="💼")
@@ -48,7 +49,7 @@ with col1:
     if "salary_input" not in st.session_state: st.session_state.salary_input = ""
 
     with st.form("employee_form", clear_on_submit=True):
-        input_id = st.text_input("ID (e.g., RECON-01)", key="emp_id_input")
+        input_id = st.text_input("ID (Numbers only, e.g., 101)", key="emp_id_input").strip()
         name = st.text_input("Name", key="name_input")
         department = st.selectbox("Select Department", [
             "Production", "Quality Control", "Development",
@@ -61,6 +62,9 @@ with col1:
         if st.form_submit_button("Add to Database", use_container_width=True, type="primary"):
             if not (input_id and name and designation and salary):
                 st.error("Please fill all fields!")
+            # 🆕 আইডি ভ্যালিডেশন লজিক: শুধুমাত্র সংখ্যা (0-9) অনুমতি পাবে, কোনো লেখা বা ড্যাশ থাকবে না
+            elif not re.match(r"^[0-9]+$", input_id):
+                st.error("⚠️ Invalid ID Format! ID must only contain numbers (No letters or spaces allowed). e.g., 101, 2045")
             else:
                 try:
                     conn = get_db_connection()
