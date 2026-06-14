@@ -49,8 +49,8 @@ with col1:
     if "desg_val" not in st.session_state: st.session_state.desg_val = ""
     if "salary_val" not in st.session_state: st.session_state.salary_val = ""
 
-    # clear_on_submit বন্ধ করা হলো যাতে ভুল হলে লেখা মুছে না যায়
-    with st.form("employee_form", clear_on_submit=False):
+    # clear_on_submit=True দেওয়া হলো যাতে সাবমিট সফল হলে স্ট্রিমলিট অটো ফরম খালি করে দেয়
+    with st.form("employee_form", clear_on_submit=True):
         input_id = st.text_input("ID (Numbers only, e.g., 101)", value=st.session_state.emp_id_val).strip()
         name = st.text_input("Name", value=st.session_state.name_val)
         department = st.selectbox("Select Department", [
@@ -62,7 +62,7 @@ with col1:
         salary = st.text_input("Gross Salary / Daily Wage Rate (Tk)", value=st.session_state.salary_val)
         
         if st.form_submit_button("Add to Database", use_container_width=True, type="primary"):
-            # বর্তমানে ফর্মে যা লেখা আছে তা সাময়িকভাবে সেশন স্টেটে সেভ করে রাখা
+            # ভ্যালিডেশন চেক করার সময় সাময়িকভাবে সেশন স্টেটে ডাটা ধরে রাখা (যাতে ভুল হলে ইনপুট মুছে না যায়)
             st.session_state.emp_id_val = input_id
             st.session_state.name_val = name
             st.session_state.desg_val = designation
@@ -85,7 +85,7 @@ with col1:
                     
                     st.success(f"{name} successfully added!")
                     
-                    # ডাটাবেজে সফলভাবে যুক্ত হওয়ার পরই কেবল ফরমের সব লেখা ডিলিট বা রিসেট হবে
+                    # ডাটাবেজে সফলভাবে যুক্ত হওয়ার পরই কেবল সেশন স্টেট পুরো খালি করে দেওয়া হবে
                     st.session_state.emp_id_val = ""
                     st.session_state.name_val = ""
                     st.session_state.desg_val = ""
