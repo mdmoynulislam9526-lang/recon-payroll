@@ -42,13 +42,11 @@ col1, col2 = st.columns([1, 2.3])
 with col1:
     st.header("➕ Add New Person")
     
-    # ফর্মের ইনপুটগুলো খালি রাখার জন্য সেশন স্টেট চেক
     if "emp_id_input" not in st.session_state: st.session_state.emp_id_input = ""
     if "name_input" not in st.session_state: st.session_state.name_input = ""
     if "desg_input" not in st.session_state: st.session_state.desg_input = ""
     if "salary_input" not in st.session_state: st.session_state.salary_input = ""
 
-    # ফর্মের সাথে একটি কাস্টম key যুক্ত করা হয়েছে যাতে ফর্ম রিসেট করা যায়
     with st.form("employee_form", clear_on_submit=True):
         input_id = st.text_input("ID (e.g., RECON-01)", key="emp_id_input")
         name = st.text_input("Name", key="name_input")
@@ -72,16 +70,7 @@ with col1:
                     conn.close()
                     
                     st.success(f"{name} successfully added!")
-                    
-                    # 🆕 ডাটাবেজে সেভ হওয়ার পর ফর্মের ভেতরের সব বক্স জোরপূর্বক খালি (Reset) করার লজিক
-                    st.session_state.emp_id_input = ""
-                    st.session_state.name_input = ""
-                    st.session_state.desg_input = ""
-                    st.session_state.salary_input = ""
-                    
-                    # অ্যাপ রিরান করে নতুন খালি ফর্ম দেখানো
                     st.rerun()
-                    
                 except sqlite3.IntegrityError:
                     st.error(f"⚠️ Warning: Employee ID '{input_id}' already exists!")
                 except ValueError: 
@@ -166,7 +155,6 @@ with col2:
         
         saved_db_tracker = {r[1]: {"present": r[2], "absent": r[3], "fine": r[4], "ot_hrs": r[5], "ot_rate": r[6], "bonus": r[7], "advance": r[8]} for r in db_records}
 
-        # ১. লাইভ ড্যাশবোর্ড সামারি ক্যালকুলেশন
         total_payout, total_fine, total_bonus, total_advance = 0.0, 0.0, 0.0, 0.0
         for r in rows:
             eid, _, _, cat, _, base_sal = r
@@ -231,7 +219,6 @@ with col2:
                     generate_pdf_bytes((selected_emp[0], selected_emp[1], selected_emp[2], selected_emp[3], selected_emp[4], calc_salary + (rec['ot_hrs'] * rec['ot_rate']) + rec['bonus'] - rec['advance']), full_month, rec['absent'], rec['fine'], rec['present'], pdf_buf)
                     st.download_button("📥 Download Pay Slip (PDF)", data=pdf_buf.getvalue(), file_name=f"PaySlip_{selected_emp[0]}_{select_m}.pdf", mime="application/pdf", use_container_width=True)
 
-        # TAB 4: ATTENDANCE & PAYROLL PROCESSOR
         with tab2:
             view_cat = st.selectbox("Select Category to Process", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
             filtered_rows = [r for r in rows if r[3] == view_cat]
@@ -250,15 +237,13 @@ with col2:
                         col_in1, col_in2, col_in3 = st.columns(3)
                         with col_in1:
                             if r[3] == 'Worker (Daily Basis)':
-                                p_d = st.number_input("Present Days", 0, days_in_month, int(rec['present']), key=f"p_{r[0]}")
-                                a_d = days_in_month - p_d
-                                st.markdown(f"ℹ️ *Auto Absent Calculated:* **{a_d} Days**")
+                                total_target_days = st.number_input("Total Target Month Days (Base)", 1, 100, int(rec['present'] + rec['absent']) if rec['absent'] > 0 else days_in_month, key=f"target_{r[0]}")
+                                a_d = st.number_input("Absent Days", 0, total_target_days, int(rec['absent']), key=f"a_{r[0]}")
+                                p_d = total_target_days - a_d
+                                st.markdown(f"📊 *Auto Present Calculated:* **{p_d} Days**")
                             else:
-                                # 🆕 ১. বেস দিন ২৬ ফিক্সড না রেখে সর্বোচ্চ ১০০ দিন পর্যন্ত বাড়ানোর অপশন দেওয়া হলো (ডিফল্ট ২৬ থাকবে)
                                 total_target_days = st.number_input("Total Target Month Days (Base)", 1, 100, int(rec['present'] + rec['absent']) if rec['absent'] > 0 else max(26, int(rec['present'])), key=f"target_{r[0]}")
                                 a_d = st.number_input("Absent Days", 0, total_target_days, int(rec['absent']), key=f"a_{r[0]}")
-                                
-                                # 🆕 ২. সূত্র পরিবর্তন: উপস্থিত দিন = বেস দিন - এবসেন্ট দিন (যা অটোমেশন নিশ্চিত করবে)
                                 p_d = total_target_days - a_d
                                 st.markdown(f"📊 *Auto Present Calculated:* **{p_d} Days**")
                                 
@@ -286,10 +271,9 @@ with col2:
                         st.success(f"Successfully saved records for {full_month} into system permanent storage!")
                         st.rerun()
 
-            # --- SEPARATED CATEGORY OVERVIEW TABLE ---
             st.markdown("### 👁️ Current Month Full Payroll Sheets Overview")
             categories_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
-            display_titles = ["💼 Managers", "👔 Officers", "🛠️ Workers - Permanent", f"📆 Workers - Daily Basis ({days_in_month} Days Base)"]
+            display_titles = ["💼 Managers", "👔 Officers", "🛠️ Workers - Permanent", "📆 Workers - Daily Basis"]
             
             for cat_name, title_text in zip(categories_list, display_titles):
                 cat_rows = [r for r in rows if r[3] == cat_name]
@@ -305,7 +289,7 @@ with col2:
 
                     _, _, _, _, ab_cut, net_p, _ = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], cat, rec['present'])
                     
-                    display_absent = rec['absent'] if cat != 'Worker (Daily Basis)' else (days_in_month - rec['present'])
+                    display_absent = rec['absent']
                     ot_total = rec['ot_hrs'] * rec['ot_rate']
                     final_payable = net_p + ot_total + rec['bonus'] - rec['advance']
                     
@@ -321,7 +305,6 @@ with col2:
                     st.markdown(f"##### {title_text}")
                     st.dataframe(pd.DataFrame(tracker_table), use_container_width=True)
 
-            # --- EXCEL DOWNLOAD ---
             st.markdown("---")
             if st.button("🚀 Prepare & Download Full Excel Report", use_container_width=True):
                 ex_buf = BytesIO()
@@ -339,7 +322,7 @@ with col2:
                             _, _, _, _, ab_cut, net_p, total_earn = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], r[3], rec['present'])
                             ot_total = rec['ot_hrs'] * rec['ot_rate']
                             final_payable = net_p + ot_total + rec['bonus'] - rec['advance']
-                            display_absent = rec['absent'] if r[3] != 'Worker (Daily Basis)' else (days_in_month - rec['present'])
+                            display_absent = rec['absent']
                             
                             cat_table.append({
                                 "Employee ID": r[0], "Name": r[1], "Department": r[4], "Category": r[3], "Designation": r[2],
