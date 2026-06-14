@@ -43,28 +43,38 @@ col1, col2 = st.columns([1, 2.3])
 with col1:
     st.header("➕ Add New Person")
     
-    if "emp_id_input" not in st.session_state: st.session_state.emp_id_input = ""
-    if "name_input" not in st.session_state: st.session_state.name_input = ""
-    if "desg_input" not in st.session_state: st.session_state.desg_input = ""
-    if "salary_input" not in st.session_state: st.session_state.salary_input = ""
+    # ইনপুট ভ্যালুগুলো সেশন স্টেটে ধরে রাখার ব্যবস্থা (যাতে ভুলের কারণে মুছে না যায়)
+    if "emp_id_val" not in st.session_state: st.session_state.emp_id_val = ""
+    if "name_val" not in st.session_state: st.session_state.name_val = ""
+    if "desg_val" not in st.session_state: st.session_state.desg_val = ""
+    if "salary_val" not in st.session_state: st.session_state.salary_val = ""
 
-    with st.form("employee_form", clear_on_submit=True):
-        input_id = st.text_input("ID (Numbers only, e.g., 101)", key="emp_id_input").strip()
-        name = st.text_input("Name", key="name_input")
+    # clear_on_submit বন্ধ করা হলো যাতে ভুল হলে লেখা মুছে না যায়
+    with st.form("employee_form", clear_on_submit=False):
+        input_id = st.text_input("ID (Numbers only, e.g., 101)", value=st.session_state.emp_id_val).strip()
+        name = st.text_input("Name", value=st.session_state.name_val)
         department = st.selectbox("Select Department", [
             "Production", "Quality Control", "Development",
             "Maintenance", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"
         ])
         category = st.selectbox("Select Category", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"])
-        designation = st.text_input("Designation", key="desg_input")
-        salary = st.text_input("Gross Salary / Daily Wage Rate (Tk)", key="salary_input")
+        designation = st.text_input("Designation", value=st.session_state.desg_val)
+        salary = st.text_input("Gross Salary / Daily Wage Rate (Tk)", value=st.session_state.salary_val)
         
         if st.form_submit_button("Add to Database", use_container_width=True, type="primary"):
+            # বর্তমানে ফর্মে যা লেখা আছে তা সাময়িকভাবে সেশন স্টেটে সেভ করে রাখা
+            st.session_state.emp_id_val = input_id
+            st.session_state.name_val = name
+            st.session_state.desg_val = designation
+            st.session_state.salary_val = salary
+            
             if not (input_id and name and designation and salary):
                 st.error("Please fill all fields!")
-            # 🆕 আইডি ভ্যালিডেশন লজিক: শুধুমাত্র সংখ্যা (0-9) অনুমতি পাবে, কোনো লেখা বা ড্যাশ থাকবে না
+            
+            # আইডি ভ্যালিডেশন: শুধু সংখ্যা হতে হবে
             elif not re.match(r"^[0-9]+$", input_id):
                 st.error("⚠️ Invalid ID Format! ID must only contain numbers (No letters or spaces allowed). e.g., 101, 2045")
+                
             else:
                 try:
                     conn = get_db_connection()
@@ -74,6 +84,13 @@ with col1:
                     conn.close()
                     
                     st.success(f"{name} successfully added!")
+                    
+                    # ডাটাবেজে সফলভাবে যুক্ত হওয়ার পরই কেবল ফরমের সব লেখা ডিলিট বা রিসেট হবে
+                    st.session_state.emp_id_val = ""
+                    st.session_state.name_val = ""
+                    st.session_state.desg_val = ""
+                    st.session_state.salary_val = ""
+                    
                     st.rerun()
                 except sqlite3.IntegrityError:
                     st.error(f"⚠️ Warning: Employee ID '{input_id}' already exists!")
