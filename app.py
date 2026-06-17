@@ -266,6 +266,7 @@ with col2:
                                 total_target_days = st.number_input("Total Target Month Days (Base)", 1, 100, int(rec['present'] + rec['absent']) if rec['absent'] > 0 else max(26, int(rec['present'])), key=f"target_{r[0]}")
                                 a_d = st.number_input("Absent Days", 0, total_target_days, int(rec['absent']), key=f"a_{r[0]}")
                                 p_d = total_target_days - a_d
+                                m_cut_val = (r[5] / 26) * p_d if p_d < 26 else r[5]
                                 st.markdown(f"📊 *Auto Present Calculated:* **{p_d} Days**")
                                 
                             f_d = st.number_input("Penalty/Fine (Tk)", 0.0, value=float(rec['fine']), key=f"f_{r[0]}")
@@ -329,6 +330,7 @@ with col2:
             st.markdown("---")
             if st.button("🚀 Prepare & Download Full Excel Report", use_container_width=True):
                 ex_buf = BytesIO()
+                # 🆕 openpyxl ইঞ্জিন ব্যবহার করে এক্সেল ফাইল রাইট করা এবং ডিজাইন ফিক্স করা
                 with pd.ExcelWriter(ex_buf, engine='openpyxl') as writer:
                     sheet_names = ["Managers", "Officers", "Workers_Permanent", "Workers_Daily"]
                     for cat_name, s_name in zip(categories_list, sheet_names):
@@ -346,12 +348,27 @@ with col2:
                             display_absent = rec['absent']
                             
                             cat_table.append({
-                                "Employee ID": r[0], "Name": r[1], "Department": r[4], "Category": r[3], "Designation": r[2],
+                                "Employee ID": str(r[0]),  # 🆕 আইডি-কে এক্সেলের জন্য টেক্সট ফরম্যাটে কনভার্ট করা হলো যাতে শূন্য না কাটে
+                                "Name": r[1], "Department": r[4], "Category": r[3], "Designation": r[2],
                                 "Base Salary/Rate": r[5], "Present Days": rec['present'], "Absent Days": display_absent,
                                 "Absent Cut": round(ab_cut, 2), "Fine/Penalty": rec['fine'], "OT Earnings": round(ot_total, 2), 
                                 "Bonus": rec['bonus'], "Advance Deduct": rec['advance'], "Net Payable (Tk)": round(final_payable, 2)
                             })
-                        df_cat = pd.DataFrame(cat_table) if cat_table else pd.DataFrame()
+                        
+                        df_cat = pd.DataFrame(cat_table) if cat_table else pd.DataFrame(columns=[
+                            "Employee ID", "Name", "Department", "Category", "Designation",
+                            "Base Salary/Rate", "Present Days", "Absent Days", "Absent Cut", 
+                            "Fine/Penalty", "OT Earnings", "Bonus", "Advance Deduct", "Net Payable (Tk)"
+                        ])
                         df_cat.to_excel(writer, index=False, sheet_name=s_name)
+                        
+                        # 🆕 ঘরের ম্যাপ এবং সাইজ অটোমেটিক লেখা অনুযায়ী এডজাস্ট করার জন্য লজিক
+                        workbook = writer.book
+                        worksheet = writer.sheets[s_name]
+                        for col in worksheet.columns:
+                            max_len = max(len(str(cell.value or '')) for cell in col)
+                            col_letter = col[0].column_letter
+                            worksheet.column_dimensions[col_letter].width = max(max_len + 3, 12) # অটো-ফিট উইথ সেটিং
+
                 st.download_button(label="📥 Download Now", data=ex_buf.getvalue(), file_name=f"RECON_Advanced_Payroll_{select_m}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
     else: st.info("Database is empty. Please add people from the left panel.")
