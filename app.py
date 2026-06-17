@@ -4,10 +4,24 @@ from datetime import datetime
 import calendar
 from io import BytesIO
 import pandas as pd
-import re  # ID format check korar jonno regex
+import re
+import os
+import base64
 from calculations import calculate_salary_breakdown, generate_pdf_bytes
 
 st.set_page_config(page_title="RECON Payroll System", layout="wide", page_icon="💼")
+
+# --- IMAGE TO BASE64 CONVERTER (লোগো ও সিগনেচার এইচটিএমএল-এ দেখানোর জন্য) ---
+def get_base64_image(image_path):
+    if os.path.exists(image_path):
+        with open(image_path, "rb") as img_file:
+            return f"data:image/png;base64,{base64.b64encode(img_file.read()).decode()}"
+    return ""
+
+# আপনার ফোল্ডারে লোগো এবং সিগনেচার ফাইল যে নামে আছে, এখানে সেই নামগুলো দিন
+# উদাহরণস্বরূপ: "logo.png" এবং "signature.png"
+logo_base64 = get_base64_image("logo.png") 
+sig_base64 = get_base64_image("signature.png")
 
 # --- DATABASE INITIALIZATION ---
 def init_db():
@@ -68,7 +82,7 @@ with col1:
             if not (input_id and name and designation and salary):
                 st.error("Please fill all fields!")
             elif not re.match(r"^[0-9]+$", input_id):
-                st.error("⚠️ Invalid ID Format! ID must only contain numbers (No letters or spaces).")
+                st.error("⚠️ Invalid ID Format! ID must only contain numbers.")
             else:
                 try:
                     conn = get_db_connection()
@@ -260,10 +274,13 @@ with col2:
             st.markdown("---")
             st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
             
+            # লোগো এইচটিএমএল ট্যাগ জেনারেট করা
+            logo_html_tag = f'<img src="{logo_base64}" style="max-height: 60px; margin-bottom: 8px;"><br>' if logo_base64 else ""
+
             print_html = f"""
             <div style="font-family: 'Arial', sans-serif; padding: 15px; background: white; color: black; border-radius: 8px;">
-                <!-- 🏢 RECON OFFICIAL BANNER LOGO -->
                 <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 12px; margin-bottom: 15px;">
+                    {logo_html_tag}
                     <h1 style="margin: 0; font-size: 28px; color: #1F4E78; font-weight: bold; letter-spacing: 1px;">🏢 RECON LABORATORIES LTD.</h1>
                     <p style="margin: 5px 0 0 0; font-size: 14px; color: #555; font-weight: bold; text-transform: uppercase;">Advanced Employee Monthly Payroll Statement Sheet</p>
                     <span style="display: inline-block; margin-top: 6px; padding: 4px 15px; background: #E2EFDA; color: #375623; border-radius: 20px; font-size: 13px; font-weight: bold;">
@@ -337,14 +354,24 @@ with col2:
                     """
                 print_html += "</tbody></table></div>"
             
+            # --- ✒️ SIGNATURE SECTION (শীটের একদম নিচে) ---
+            sig_html_tag = f'<img src="{sig_base64}" style="max-height: 50px; display:block; margin: 0 auto 5px auto;">' if sig_base64 else '<div style="height:50px;"></div>'
+            print_html += f"""
+                <div style="margin-top: 50px; display: flex; justify-content: flex-end; padding-right: 20px;">
+                    <div style="text-align: center; width: 220px; border-top: 1.5px solid black; padding-top: 5px;">
+                        {sig_html_tag}
+                        <p style="margin:0; font-size:13px; font-weight:bold; color:black;">Authorized Signature</p>
+                        <p style="margin:2px 0 0 0; font-size:11px; color:#666;">RECON LABORATORIES LTD.</p>
+                    </div>
+                </div>
+            """
+            
             print_html += "</div>"
 
             if has_any_data:
-                # 🖥️ 🆕 এখানে `scroller=True` কেটে দেওয়া হয়েছে, যা ক্র্যাশ হওয়া বন্ধ করবে
-                st.components.v1.html(print_html, height=600)
+                st.components.v1.html(print_html, height=650)
                 
-                # 🖨️ প্রিন্ট করার বোতাম
-                if st.button("🖨️ CLICK HERE TO PRINT THIS FULL SHEET (WITH RECON LOGO)", use_container_width=True, type="primary"):
+                if st.button("🖨️ CLICK HERE TO PRINT THIS FULL SHEET (WITH RECON LOGO & SIGNATURE)", use_container_width=True, type="primary"):
                     st.components.v1.html(f"""
                         {print_html}
                         <script>
