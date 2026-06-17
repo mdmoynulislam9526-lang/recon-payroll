@@ -6,6 +6,8 @@ from io import BytesIO
 import pandas as pd
 import re  # আইডি ফরম্যাট চেক করার জন্য রেগুলার এক্সপ্রেশন লাইব্রেরি
 from calculations import calculate_salary_breakdown, generate_pdf_bytes
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 st.set_page_config(page_title="RECON Payroll System", layout="wide", page_icon="💼")
 
@@ -109,7 +111,7 @@ def render_inline_management(r, prefix=""):
                 cat_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
                 ch_cat = st.selectbox("Edit Category", cat_list, index=cat_list.index(ecat) if ecat in cat_list else 0)
                 ch_desg = st.text_input("Edit Designation", value=edesg)
-                ch_salary = st.text_input("Edit Salary/Rate", value=str(ch_salary))
+                ch_salary = st.text_input("Edit Salary/Rate", value=str(esalary))
                 
                 b1, b2 = st.columns(2)
                 with b1:
@@ -125,6 +127,7 @@ def render_inline_management(r, prefix=""):
                     if st.form_submit_button("Cancel", use_container_width=True):
                         st.session_state[f"emode_{prefix}_{eid}"] = False
                         st.rerun()
+        st.markdown("<hr style='margin:4px 0px; border-color:#eee;'>", unsafe_allow_html=True)
 
 # --- RIGHT SIDE: PAYROLL MANAGEMENT ---
 with col2:
@@ -287,65 +290,120 @@ with col2:
 
             st.markdown("---")
             
-            # --- 🚀 সুপার ফিক্সড এক্সেল জেনারেটর কোড ---
+            # --- 🚀 ১০০% পিওর ম্যানুয়াল ওপেনপিক্সেল এক্সেল জেনারেটর ---
             if st.button("🚀 Prepare & Download Full Excel Report", use_container_width=True):
-                ex_buf = BytesIO()
-                with pd.ExcelWriter(ex_buf, engine='openpyxl') as writer:
-                    sheet_names = ["Managers", "Officers", "Workers_Permanent", "Workers_Daily"]
-                    for cat_name, s_name in zip(categories_list, sheet_names):
-                        cat_employees = [r for r in rows if r[3] == cat_name]
-                        cat_table = []
-                        for r in cat_employees:
-                            rec = saved_db_tracker.get(r[0], {"present": days_in_month if r[3] == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
-                            calc_salary = r[5]
-                            if r[3] != 'Worker (Daily Basis)' and rec['present'] < 26:
-                                calc_salary = (r[5] / 26) * rec['present']
+                wb = Workbook()
+                # প্রথম ডিফল্ট শিটটি ডিলিট করার জন্য রেখে দেওয়া
+                default_sheet = wb.active
+                
+                sheet_names = ["Managers", "Officers", "Workers_Permanent", "Workers_Daily"]
+                headers = [
+                    "Employee ID", "Name", "Department", "Category", "Designation",
+                    "Base Salary/Rate", "Present Days", "Absent Days", "Absent Cut", 
+                    "Fine/Penalty", "OT Earnings", "Bonus", "Advance Deduct", "Net Payable (Tk)"
+                ]
+                
+                # ফন্ট ও স্টাইল ডিফাইন
+                font_title = Font(name="Arial", size=16, bold=True, color="FFFFFF")
+                font_subtitle = Font(name="Arial", size=11, italic=True, bold=True, color="000000")
+                font_header = Font(name="Arial", size=11, bold=True, color="FFFFFF")
+                font_data = Font(name="Arial", size=10)
+                
+                fill_title = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
+                fill_subtitle = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+                fill_header = PatternFill(start_color="2F5597", end_color="2F5597", fill_type="solid")
+                
+                align_center = Alignment(horizontal="center", vertical="center")
+                align_left = Alignment(horizontal="left", vertical="center")
+                
+                thin_border = Border(
+                    left=Side(style='thin', color='D9D9D9'),
+                    right=Side(style='thin', color='D9D9D9'),
+                    top=Side(style='thin', color='D9D9D9'),
+                    bottom=Side(style='thin', color='D9D9D9')
+                )
 
-                            _, _, _, _, ab_cut, net_p, total_earn = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], r[3], rec['present'])
-                            ot_total = rec['ot_hrs'] * rec['ot_rate']
-                            final_payable = net_p + ot_total + rec['bonus'] - rec['advance']
-                            
-                            cat_table.append({
-                                "Employee ID": f"'{str(r[0])}",  # 🆕 এক্সেলকে ফোর্স করতে শুরুতে ' দেওয়া হলো যাতে অফিসারদের ০ আইডি কখনো না কাটে
-                                "Name": r[1], "Department": r[4], "Category": r[3], "Designation": r[2],
-                                "Base Salary/Rate": r[5], "Present Days": rec['present'], "Absent Days": rec['absent'],
-                                "Absent Cut": round(ab_cut, 2), "Fine/Penalty": rec['fine'], "OT Earnings": round(ot_total, 2), 
-                                "Bonus": rec['bonus'], "Advance Deduct": rec['advance'], "Net Payable (Tk)": round(final_payable, 2)
-                            })
+                for cat_name, s_name in zip(categories_list, sheet_names):
+                    ws = wb.create_sheet(title=s_name)
+                    
+                    # ১. কোম্পানি ব্যানার (লোগো টেক্সট)
+                    ws.merge_cells("A1:N1")
+                    ws["A1"] = "🏢 RECON LABORATORIES LTD. (PAYROLL SYSTEM)"
+                    ws["A1"].font = font_title
+                    ws["A1"].fill = fill_title
+                    ws["A1"].alignment = align_center
+                    ws.row_dimensions[1].height = 45
+                    
+                    # ২. সাব-হেডার রিপোর্ট ইনফো
+                    ws.merge_cells("A2:N2")
+                    ws["A2"] = f"Category Payroll Sheet: {cat_name} — Period: {full_month}"
+                    ws["A2"].font = font_subtitle
+                    ws["A2"].fill = fill_subtitle
+                    ws["A2"].alignment = align_center
+                    ws.row_dimensions[2].height = 25
+                    
+                    # ৩. রো ৩ (ফাঁকা স্পেসার)
+                    ws.row_dimensions[3].height = 12
+                    
+                    # ৪. কলাম হেডার (রো ৪)
+                    for col_num, header_text in enumerate(headers, 1):
+                        cell = ws.cell(row=4, column=col_num)
+                        cell.value = header_text
+                        cell.font = font_header
+                        cell.fill = fill_header
+                        cell.alignment = align_center
+                        cell.border = thin_border
+                    ws.row_dimensions[4].height = 28
+                    
+                    # ৫. ডেটা ইনসার্ট করা (রো ৫ থেকে শুরু)
+                    cat_employees = [r for r in rows if r[3] == cat_name]
+                    current_row = 5
+                    
+                    for r in cat_employees:
+                        rec = saved_db_tracker.get(r[0], {"present": days_in_month if r[3] == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
+                        calc_salary = r[5]
+                        if r[3] != 'Worker (Daily Basis)' and rec['present'] < 26:
+                            calc_salary = (r[5] / 26) * rec['present']
+
+                        _, _, _, _, ab_cut, net_p, _ = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], r[3], rec['present'])
+                        ot_total = rec['ot_hrs'] * rec['ot_rate']
+                        final_payable = net_p + ot_total + rec['bonus'] - rec['advance']
                         
-                        df_cat = pd.DataFrame(cat_table) if cat_table else pd.DataFrame(columns=["Employee ID", "Name", "Department", "Category", "Designation", "Base Salary/Rate", "Present Days", "Absent Days", "Absent Cut", "Fine/Penalty", "OT Earnings", "Bonus", "Advance Deduct", "Net Payable (Tk)"])
+                        # মানগুলো রো অনুযায়ী বসাচ্ছি
+                        row_values = [
+                            f"'{str(r[0])}", # জিরো বা টেক্সট সেভ রাখার আইডি ট্রিক
+                            r[1], r[4], r[3], r[2],
+                            round(r[5], 2), rec['present'], rec['absent'],
+                            round(ab_cut, 2), round(rec['fine'], 2), round(ot_total, 2),
+                            round(rec['bonus'], 2), round(rec['advance'], 2), round(final_payable, 2)
+                        ]
                         
-                        # ডাটা ৪ নম্বর রো থেকে রাইট হবে
-                        df_cat.to_excel(writer, index=False, sheet_name=s_name, startrow=3)
-                        worksheet = writer.sheets[s_name]
-                        
-                        # 🏢 লোগো ও মূল ব্যানার টাইটেল (Row 1)
-                        worksheet.merge_cells("A1:N1")
-                        title_cell = worksheet["A1"]
-                        title_cell.value = "🏢 RECON LABORATORIES LTD. (PAYROLL SYSTEM)"
-                        from openpyxl.styles import Font, PatternFill, Alignment
-                        title_cell.font = Font(name="Arial", size=16, bold=True, color="FFFFFF")
-                        title_cell.fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
-                        title_cell.alignment = Alignment(horizontal="center", vertical="center")
-                        worksheet.row_dimensions[1].height = 45 # বড় এবং স্পষ্ট হাইট
-                        
-                        # সাব-হেডার ইনফো (Row 2)
-                        worksheet.merge_cells("A2:N2")
-                        subtitle_cell = worksheet["A2"]
-                        subtitle_cell.value = f"Category Sheet: {cat_name} — Generated On: {full_month}"
-                        subtitle_cell.font = Font(name="Arial", size=11, italic=True, bold=True, color="000000")
-                        subtitle_cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
-                        subtitle_cell.alignment = Alignment(horizontal="center", vertical="center")
-                        worksheet.row_dimensions[2].height = 25
-                        
-                        # রো ৩ এবং ৪ (কলাম হেডার) এর হাইট ফিক্স
-                        worksheet.row_dimensions[3].height = 15
-                        worksheet.row_dimensions[4].height = 28
-                        
-                        # 🆕 কলামের ঘর পারফেক্ট করার চূড়ান্ত মেথড (লুপের একদম বাইরে স্বাধীনভাবে প্রয়োগ)
-                        widths_dict = {'A': 20, 'B': 30, 'C': 26, 'D': 22, 'E': 26, 'F': 22, 'G': 16, 'H': 16, 'I': 18, 'J': 18, 'K': 18, 'L': 16, 'M': 18, 'N': 25}
-                        for col_letter, target_width in widths_dict.items():
-                            worksheet.column_dimensions[col_letter].width = target_width
+                        for col_num, val in enumerate(row_values, 1):
+                            cell = ws.cell(row=current_row, column=col_num)
+                            cell.value = val
+                            cell.font = font_data
+                            cell.border = thin_border
+                            # সংখ্যা এবং টেক্সট অ্যালাইনমেন্ট আলাদা করা
+                            if isinstance(val, (int, float)):
+                                cell.alignment = Alignment(horizontal="right", vertical="center")
+                            else:
+                                cell.alignment = align_left
+                                
+                        ws.row_dimensions[current_row].height = 22
+                        current_row += 1
+                    
+                    # 🆕 কলামের সুনির্দিষ্ট বড় বড় সাইজ এসাইন করা (কোনো প্যান্ডাস নেই, তাই এটি গ্যারান্টিড কাজ করবে)
+                    widths_dict = {'A': 18, 'B': 28, 'C': 24, 'D': 22, 'E': 25, 'F': 22, 'G': 15, 'H': 15, 'I': 16, 'J': 16, 'K': 16, 'L': 15, 'M': 16, 'N': 24}
+                    for col_letter, target_width in widths_dict.items():
+                        ws.column_dimensions[col_letter].width = target_width
+
+                # প্রথম ডিফল্ট ব্ল্যাঙ্ক শিটটি মুছে ফেলা
+                wb.remove(default_sheet)
+                
+                # বাইনারি বাফারে সেভ করা
+                ex_buf = BytesIO()
+                wb.save(ex_buf)
+                ex_buf.seek(0)
 
                 st.download_button(label="📥 Download Now", data=ex_buf.getvalue(), file_name=f"RECON_Advanced_Payroll_{select_m}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
     else: st.info("Database is empty. Please add people from the left panel.")
