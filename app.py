@@ -256,13 +256,13 @@ with col2:
                         st.success(f"Successfully saved records!")
                         st.rerun()
 
-            # --- 🆕 HTML/CSS PRINTABLE SYSTEM WITH LOGO BANNER ---
+            # --- HTML/CSS PRINTABLE SYSTEM WITH LOGO BANNER ---
             st.markdown("---")
             st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
             
-            # Pure Dynamic Printable Web Content Structure
             print_html = f"""
-            <div id="printable-payroll-area" style="font-family: 'Arial', sans-serif; padding: 15px; background: white; color: black; border-radius: 8px;">
+            <div style="font-family: 'Arial', sans-serif; padding: 15px; background: white; color: black; border-radius: 8px;">
+                <!-- 🏢 RECON OFFICIAL BANNER LOGO -->
                 <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 12px; margin-bottom: 15px;">
                     <h1 style="margin: 0; font-size: 28px; color: #1F4E78; font-weight: bold; letter-spacing: 1px;">🏢 RECON LABORATORIES LTD.</h1>
                     <p style="margin: 5px 0 0 0; font-size: 14px; color: #555; font-weight: bold; text-transform: uppercase;">Advanced Employee Monthly Payroll Statement Sheet</p>
@@ -284,7 +284,7 @@ with col2:
                 has_any_data = True
                 print_html += f"""
                 <h3 style="color: #2F5597; border-left: 5px solid #2F5597; padding-left: 8px; margin-top: 25px; margin-bottom: 10px; font-size: 16px;">{title_text}</h3>
-                <div style="overflow-x: auto;">
+                <div style="overflow-x: auto; max-width: 100%;">
                     <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 15px; background: white; min-width: 1000px;">
                         <thead>
                             <tr style="background-color: #2F5597; color: white; text-align: center;">
@@ -340,24 +340,10 @@ with col2:
             print_html += "</div>"
 
             if has_any_data:
-                # 🖥️ Streamlit screen rendering
-                st.components.v1.html(print_html, height=550, scroller=True)
+                # 🖥️ 🆕 এখানে `scroller=True` কেটে দেওয়া হয়েছে, যা ক্র্যাশ হওয়া বন্ধ করবে
+                st.components.v1.html(print_html, height=600)
                 
-                # 🖨️ Magic Print Trigger Script
-                st.markdown("""
-                    <script>
-                    function printSheet() {
-                        var printContents = document.getElementById("printable-payroll-area").innerHTML;
-                        var originalContents = document.body.innerHTML;
-                        document.body.innerHTML = printContents;
-                        window.print();
-                        document.body.innerHTML = originalContents;
-                        window.location.reload();
-                    }
-                    </script>
-                """, unsafe_allow_html=True)
-                
-                # Actual Clickable Streamlit Print Command Button
+                # 🖨️ প্রিন্ট করার বোতাম
                 if st.button("🖨️ CLICK HERE TO PRINT THIS FULL SHEET (WITH RECON LOGO)", use_container_width=True, type="primary"):
                     st.components.v1.html(f"""
                         {print_html}
