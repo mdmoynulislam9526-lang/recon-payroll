@@ -4,10 +4,8 @@ from datetime import datetime
 import calendar
 from io import BytesIO
 import pandas as pd
-import re  # আইডি ফরম্যাট চেক করার জন্য রেগুলার এক্সপ্রেশন লাইব্রেরি
+import re  # ID format check korar jonno regex
 from calculations import calculate_salary_breakdown, generate_pdf_bytes
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 st.set_page_config(page_title="RECON Payroll System", layout="wide", page_icon="💼")
 
@@ -70,7 +68,7 @@ with col1:
             if not (input_id and name and designation and salary):
                 st.error("Please fill all fields!")
             elif not re.match(r"^[0-9]+$", input_id):
-                st.error("⚠️ Invalid ID Format! ID must only contain numbers (No letters or spaces allowed). e.g., 101, 2045")
+                st.error("⚠️ Invalid ID Format! ID must only contain numbers (No letters or spaces).")
             else:
                 try:
                     conn = get_db_connection()
@@ -258,13 +256,56 @@ with col2:
                         st.success(f"Successfully saved records!")
                         st.rerun()
 
-            st.markdown("### 👁️ Current Month Full Payroll Sheets Overview")
-            categories_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
-            display_titles = ["💼 Managers", "👔 Officers", "🛠️ Workers - Permanent", "📆 Workers - Daily Basis"]
+            # --- 🆕 HTML/CSS PRINTABLE SYSTEM WITH LOGO BANNER ---
+            st.markdown("---")
+            st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
             
+            # Pure Dynamic Printable Web Content Structure
+            print_html = f"""
+            <div id="printable-payroll-area" style="font-family: 'Arial', sans-serif; padding: 15px; background: white; color: black; border-radius: 8px;">
+                <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 12px; margin-bottom: 15px;">
+                    <h1 style="margin: 0; font-size: 28px; color: #1F4E78; font-weight: bold; letter-spacing: 1px;">🏢 RECON LABORATORIES LTD.</h1>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #555; font-weight: bold; text-transform: uppercase;">Advanced Employee Monthly Payroll Statement Sheet</p>
+                    <span style="display: inline-block; margin-top: 6px; padding: 4px 15px; background: #E2EFDA; color: #375623; border-radius: 20px; font-size: 13px; font-weight: bold;">
+                        Statement Period: {full_month}
+                    </span>
+                </div>
+            """
+
+            categories_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
+            display_titles = ["💼 Managers Summary", "👔 Officers Summary", "🛠️ Workers (Permanent) Summary", "📆 Workers (Daily Basis) Summary"]
+            
+            has_any_data = False
             for cat_name, title_text in zip(categories_list, display_titles):
                 cat_rows = [r for r in rows if r[3] == cat_name]
-                tracker_table = []
+                if not cat_rows:
+                    continue
+                
+                has_any_data = True
+                print_html += f"""
+                <h3 style="color: #2F5597; border-left: 5px solid #2F5597; padding-left: 8px; margin-top: 25px; margin-bottom: 10px; font-size: 16px;">{title_text}</h3>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 15px; background: white; min-width: 1000px;">
+                        <thead>
+                            <tr style="background-color: #2F5597; color: white; text-align: center;">
+                                <th style="border: 1px solid #A6A6A6; padding: 8px; font-weight: bold;">ID</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 8px; font-weight: bold; text-align: left;">Employee Name</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 8px; font-weight: bold; text-align: left;">Designation</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 8px; font-weight: bold; text-align: left;">Department</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 8px; font-weight: bold;">Base Pay</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 8px; font-weight: bold;">P Days</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 8px; font-weight: bold;">A Days</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 8px; font-weight: bold;">Abs Cut</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 8px; font-weight: bold;">Fine</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 8px; font-weight: bold;">OT Earn</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 8px; font-weight: bold;">Bonus</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 8px; font-weight: bold;">Adv Cut</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 8px; font-weight: bold; background-color: #1F4E78;">Net Payable</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                """
+                
                 for r in cat_rows:
                     eid, name, desg, cat, dept, base_sal = r
                     rec = saved_db_tracker.get(eid, {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
@@ -277,133 +318,54 @@ with col2:
                     ot_total = rec['ot_hrs'] * rec['ot_rate']
                     final_payable = net_p + ot_total + rec['bonus'] - rec['advance']
                     
-                    tracker_table.append({
-                        "ID": eid, "Name": name, "Designation": desg, "Base Salary/Rate": f"Tk {base_sal:,.2f}",
-                        "Present Days": rec['present'], "Absent Days": rec['absent'],
-                        "Absent Cut": f"Tk {ab_cut:,.2f}", "Fine": f"Tk {rec['fine']:,.2f}",
-                        "OT Earn": f"Tk {ot_total:,.2f}", "Bonus": f"Tk {rec['bonus']:,.2f}", "Advance Cut": f"Tk {rec['advance']:,.2f}",
-                        "Net Payable": f"Tk {final_payable:,.2f}"
-                    })
-                if tracker_table:
-                    st.markdown(f"##### {title_text}")
-                    st.dataframe(pd.DataFrame(tracker_table), use_container_width=True)
-
-            st.markdown("---")
+                    print_html += f"""
+                            <tr style="text-align: center; background-color: white;">
+                                <td style="border: 1px solid #D9D9D9; padding: 6px; font-weight: bold; color: #444;">{str(eid)}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 6px; text-align: left; font-weight: bold; color: black;">{name}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 6px; text-align: left; color: #333;">{desg}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 6px; text-align: left; color: #333;">{dept}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 6px; text-align: right;">{base_sal:,.2f}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 6px; color: green; font-weight: bold;">{rec['present']}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 6px; color: red;">{rec['absent']}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 6px; text-align: right; color: #C00000;">{ab_cut:,.2f}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 6px; text-align: right; color: #C00000;">{rec['fine']:,.2f}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 6px; text-align: right; color: green;">{ot_total:,.2f}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 6px; text-align: right; color: green;">{rec['bonus']:,.2f}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 6px; text-align: right; color: #C00000;">{rec['advance']:,.2f}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 6px; text-align: right; font-weight: bold; color: #1F4E78; background-color: #F2F4F7;">{final_payable:,.2f}</td>
+                            </tr>
+                    """
+                print_html += "</tbody></table></div>"
             
-            # --- 🚀 ১০০% পিওর ম্যানুয়াল ওপেনপিক্সেল এক্সেল জেনারেটর ---
-            if st.button("🚀 Prepare & Download Full Excel Report", use_container_width=True):
-                wb = Workbook()
-                # প্রথম ডিফল্ট শিটটি ডিলিট করার জন্য রেখে দেওয়া
-                default_sheet = wb.active
-                
-                sheet_names = ["Managers", "Officers", "Workers_Permanent", "Workers_Daily"]
-                headers = [
-                    "Employee ID", "Name", "Department", "Category", "Designation",
-                    "Base Salary/Rate", "Present Days", "Absent Days", "Absent Cut", 
-                    "Fine/Penalty", "OT Earnings", "Bonus", "Advance Deduct", "Net Payable (Tk)"
-                ]
-                
-                # ফন্ট ও স্টাইল ডিফাইন
-                font_title = Font(name="Arial", size=16, bold=True, color="FFFFFF")
-                font_subtitle = Font(name="Arial", size=11, italic=True, bold=True, color="000000")
-                font_header = Font(name="Arial", size=11, bold=True, color="FFFFFF")
-                font_data = Font(name="Arial", size=10)
-                
-                fill_title = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
-                fill_subtitle = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
-                fill_header = PatternFill(start_color="2F5597", end_color="2F5597", fill_type="solid")
-                
-                align_center = Alignment(horizontal="center", vertical="center")
-                align_left = Alignment(horizontal="left", vertical="center")
-                
-                thin_border = Border(
-                    left=Side(style='thin', color='D9D9D9'),
-                    right=Side(style='thin', color='D9D9D9'),
-                    top=Side(style='thin', color='D9D9D9'),
-                    bottom=Side(style='thin', color='D9D9D9')
-                )
+            print_html += "</div>"
 
-                for cat_name, s_name in zip(categories_list, sheet_names):
-                    ws = wb.create_sheet(title=s_name)
-                    
-                    # ১. কোম্পানি ব্যানার (লোগো টেক্সট)
-                    ws.merge_cells("A1:N1")
-                    ws["A1"] = "🏢 RECON LABORATORIES LTD. (PAYROLL SYSTEM)"
-                    ws["A1"].font = font_title
-                    ws["A1"].fill = fill_title
-                    ws["A1"].alignment = align_center
-                    ws.row_dimensions[1].height = 45
-                    
-                    # ২. সাব-হেডার রিপোর্ট ইনফো
-                    ws.merge_cells("A2:N2")
-                    ws["A2"] = f"Category Payroll Sheet: {cat_name} — Period: {full_month}"
-                    ws["A2"].font = font_subtitle
-                    ws["A2"].fill = fill_subtitle
-                    ws["A2"].alignment = align_center
-                    ws.row_dimensions[2].height = 25
-                    
-                    # ৩. রো ৩ (ফাঁকা স্পেসার)
-                    ws.row_dimensions[3].height = 12
-                    
-                    # ৪. কলাম হেডার (রো ৪)
-                    for col_num, header_text in enumerate(headers, 1):
-                        cell = ws.cell(row=4, column=col_num)
-                        cell.value = header_text
-                        cell.font = font_header
-                        cell.fill = fill_header
-                        cell.alignment = align_center
-                        cell.border = thin_border
-                    ws.row_dimensions[4].height = 28
-                    
-                    # ৫. ডেটা ইনসার্ট করা (রো ৫ থেকে শুরু)
-                    cat_employees = [r for r in rows if r[3] == cat_name]
-                    current_row = 5
-                    
-                    for r in cat_employees:
-                        rec = saved_db_tracker.get(r[0], {"present": days_in_month if r[3] == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
-                        calc_salary = r[5]
-                        if r[3] != 'Worker (Daily Basis)' and rec['present'] < 26:
-                            calc_salary = (r[5] / 26) * rec['present']
-
-                        _, _, _, _, ab_cut, net_p, _ = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], r[3], rec['present'])
-                        ot_total = rec['ot_hrs'] * rec['ot_rate']
-                        final_payable = net_p + ot_total + rec['bonus'] - rec['advance']
-                        
-                        # মানগুলো রো অনুযায়ী বসাচ্ছি
-                        row_values = [
-                            f"'{str(r[0])}", # জিরো বা টেক্সট সেভ রাখার আইডি ট্রিক
-                            r[1], r[4], r[3], r[2],
-                            round(r[5], 2), rec['present'], rec['absent'],
-                            round(ab_cut, 2), round(rec['fine'], 2), round(ot_total, 2),
-                            round(rec['bonus'], 2), round(rec['advance'], 2), round(final_payable, 2)
-                        ]
-                        
-                        for col_num, val in enumerate(row_values, 1):
-                            cell = ws.cell(row=current_row, column=col_num)
-                            cell.value = val
-                            cell.font = font_data
-                            cell.border = thin_border
-                            # সংখ্যা এবং টেক্সট অ্যালাইনমেন্ট আলাদা করা
-                            if isinstance(val, (int, float)):
-                                cell.alignment = Alignment(horizontal="right", vertical="center")
-                            else:
-                                cell.alignment = align_left
-                                
-                        ws.row_dimensions[current_row].height = 22
-                        current_row += 1
-                    
-                    # 🆕 কলামের সুনির্দিষ্ট বড় বড় সাইজ এসাইন করা (কোনো প্যান্ডাস নেই, তাই এটি গ্যারান্টিড কাজ করবে)
-                    widths_dict = {'A': 18, 'B': 28, 'C': 24, 'D': 22, 'E': 25, 'F': 22, 'G': 15, 'H': 15, 'I': 16, 'J': 16, 'K': 16, 'L': 15, 'M': 16, 'N': 24}
-                    for col_letter, target_width in widths_dict.items():
-                        ws.column_dimensions[col_letter].width = target_width
-
-                # প্রথম ডিফল্ট ব্ল্যাঙ্ক শিটটি মুছে ফেলা
-                wb.remove(default_sheet)
+            if has_any_data:
+                # 🖥️ Streamlit screen rendering
+                st.components.v1.html(print_html, height=550, scroller=True)
                 
-                # বাইনারি বাফারে সেভ করা
-                ex_buf = BytesIO()
-                wb.save(ex_buf)
-                ex_buf.seek(0)
-
-                st.download_button(label="📥 Download Now", data=ex_buf.getvalue(), file_name=f"RECON_Advanced_Payroll_{select_m}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                # 🖨️ Magic Print Trigger Script
+                st.markdown("""
+                    <script>
+                    function printSheet() {
+                        var printContents = document.getElementById("printable-payroll-area").innerHTML;
+                        var originalContents = document.body.innerHTML;
+                        document.body.innerHTML = printContents;
+                        window.print();
+                        document.body.innerHTML = originalContents;
+                        window.location.reload();
+                    }
+                    </script>
+                """, unsafe_allow_html=True)
+                
+                # Actual Clickable Streamlit Print Command Button
+                if st.button("🖨️ CLICK HERE TO PRINT THIS FULL SHEET (WITH RECON LOGO)", use_container_width=True, type="primary"):
+                    st.components.v1.html(f"""
+                        {print_html}
+                        <script>
+                            window.print();
+                        </script>
+                    """, height=0)
+            else:
+                st.info("No records loaded yet.")
+                
     else: st.info("Database is empty. Please add people from the left panel.")
