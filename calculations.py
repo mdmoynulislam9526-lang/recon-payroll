@@ -1,133 +1,119 @@
-import matplotlib.pyplot as plt
+import os
+from io import BytesIO
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
 
-def calculate_salary_breakdown(base_salary, absent_days, fine_amount, category, present_days=26):
+def calculate_salary_breakdown(base_salary, absent_days, fine_amount, category, present_days):
     """
-    RECON Laboratories Ltd - Payroll Calculation Engine
+    আপনার বেতন হিসাব করার মূল লজিক (যা আগে ছিল)
     """
-    # ১. টোটাল আর্নিং বা বেস স্যালারি নির্ধারণ
-    total_earnings = base_salary
-    
-    # ২. ডেইলি বেসিস কর্মীদের জন্য স্পেশাল অনুপস্থিতি কর্তন (Absent Cut) লজিক
+    # আপনার আগের নিয়মে হিসাব-নিকাশ
     if category == 'Worker (Daily Basis)':
-        # এখানে base_salary হলো পার-ডে রেট (Daily Wage Rate)
-        # মোট উপার্জন = উপস্থিত দিন x ডেইলি রেট
-        actual_earned = base_salary * present_days
-        # অনুপস্থিতি কর্তন = অনুপস্থিত দিন x ডেইলি রেট
-        absent_deduction = base_salary * absent_days
-        # টোটাল আর্নিং হিসেবে দেখানোর জন্য (উপস্থিত + অনুপস্থিত দিন) অর্থাৎ ফুল মাসের বেইজ টাকা
-        total_earnings = base_salary * (present_days + absent_days)
+        # ডেইলি বেসিস ওয়ার্কারদের জন্য উপস্থিত দিনের ওপর সরাসরি বেতন
+        gross_salary = base_salary * present_days
+        absent_cut = 0.0
     else:
-        # পার্মানেন্ট, অফিসার ও ম্যানেজারদের জন্য ২৬ দিন বেস ধরে অনুপস্থিতি কর্তন
-        daily_rate = base_salary / 26
-        absent_deduction = daily_rate * absent_days
-        actual_earned = base_salary - absent_deduction
+        # পার্মানেন্ট স্টাফদের জন্য ২৬ দিন হিসাব করে এবসেন্ট কাটা
+        gross_salary = base_salary
+        if present_days < 26 and absent_days > 0:
+            absent_cut = (base_salary / 26) * absent_days
+        else:
+            absent_cut = 0.0
 
-    # ৩. ফাইন বা জরিমানা যুক্ত করা
-    total_deductions = absent_deduction + fine_amount
-    
-    # ৪. নেট পেয়েবল হিসাব (ট্যাক্স বা প্রভিডেন্ট ফান্ড আপাতত ০)
-    tax_deduction = 0.0
-    pf_deduction = 0.0
-    net_payable = actual_earned - fine_amount
-
-    # কোনো কারণে হিসাব মাইনাসে গেলে তা ০ করে দেওয়া
-    if net_payable < 0:
-        net_payable = 0.0
-
-    return base_salary, tax_deduction, pf_deduction, total_deductions, absent_deduction, net_payable, total_earnings
+    net_payable = gross_salary - absent_cut - fine_amount
+    return gross_salary, 0.0, 0.0, 0.0, absent_cut, net_payable, 0.0
 
 
-def generate_pdf_bytes(emp_tuple, month_str, absent_days, fine_amount, present_days, buffer):
+def generate_pdf_bytes(employee_data, full_month, absent_days, fine_amount, present_days, pdf_buf):
     """
-    Generates a professional PDF pay slip into the provided bytes buffer.
+    ১০০% ফিক্সড পিডিএফ জেনারেটর (সার্ভারে লোগো ও সিগনেচারসহ)
     """
-    emp_id, name, designation, category, department, base_salary = emp_tuple
+    eid, name, designation, category, department, final_payable = employee_data
     
-    # লাইভ ক্যালকুলেশন রান করা
-    b_sal, tax, pf, t_ded, ab_cut, net_p, t_earn = calculate_salary_breakdown(
-        base_salary, absent_days, fine_amount, category, present_days
-    )
-
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40)
+    # --- 🚀 সার্ভারের জন্য ইমেজ পাথ চেনার ম্যাজিক ট্রিক ---
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    logo_path = os.path.join(current_dir, "logo.png")
+    sig_path = os.path.join(current_dir, "signature.png")
+    
+    # পিডিএফ ডকুমেন্ট সেটআপ
+    doc = SimpleDocTemplate(pdf_buf, pagesize=letter, rightMargin=40, leftMargin=40, topMargin=30, bottomMargin=30)
     story = []
+    
     styles = getSampleStyleSheet()
-    
-    # কাস্টম স্টাইলস
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=18, leading=22, textColor=colors.HexColor("#1A365D"), alignment=1)
-    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=10, leading=14, textColor=colors.HexColor("#4A5568"), alignment=1)
-    section_style = ParagraphStyle('SectionStyle', parent=styles['Heading2'], fontSize=12, leading=16, textColor=colors.HexColor("#2B6CB0"), spaceBefore=10, spaceAfter=5)
-    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontSize=10, leading=14, textColor=colors.HexColor("#2D3748"))
-    bold_body = ParagraphStyle('BoldBody', parent=body_style, fontName='Helvetica-Bold')
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=20, leading=24, textColor=colors.HexColor('#1F4E78'), alignment=1)
+    sub_style = ParagraphStyle('Sub', parent=styles['Normal'], fontSize=11, leading=14, alignment=1, textColor=colors.HexColor('#555555'))
+    body_style = ParagraphStyle('Body', parent=styles['Normal'], fontSize=10, leading=14)
+    bold_style = ParagraphStyle('BoldBody', parent=body_style, fontName='Helvetica-Bold')
 
-    # হেডার অংশ
-    story.append(Paragraph("RECON LABORATORIES LTD.", title_style))
-    story.append(Paragraph("Factory: Sreepur, Gazipur, Bangladesh", subtitle_style))
-    story.append(Paragraph(f"<b>PAY SLIP FOR THE MONTH OF:</b> {month_str.upper()}", subtitle_style))
-    story.append(Spacer(1, 15))
+    # ১. কোম্পানি লোগো যোগ করা (যদি গিটহাবে logo.png ফাইলটি থাকে)
+    if os.path.exists(logo_path):
+        try:
+            logo_img = Image(logo_path, width=70, height=45)
+            logo_img.hAlign = 'CENTER'
+            story.append(logo_img)
+            story.append(Spacer(1, 5))
+        except Exception:
+            pass # কোনো কারণে ইমেজ ক্রাশ করলে পিডিএফ যেন বন্ধ না হয়
+
+    # কোম্পানি হেডার টেক্সট
+    story.append(Paragraph("<b>RECON LABORATORIES LTD.</b>", title_style))
+    story.append(Paragraph(f"Monthly Salary Pay Slip — {full_month}", sub_style))
+    story.append(Spacer(1, 20))
     
-    # কর্মচারী পরিচিতি টেবিল
+    # ২. কর্মচারীর তথ্যের টেবিল
     info_data = [
-        [Paragraph(f"<b>Employee ID:</b> {emp_id}", body_style), Paragraph(f"<b>Name:</b> {name}", body_style)],
-        [Paragraph(f"<b>Designation:</b> {designation}", body_style), Paragraph(f"<b>Department:</b> {department}", body_style)],
-        [Paragraph(f"<b>Category:</b> {category}", body_style), Paragraph(f"<b>Attendance Base:</b> {present_days + absent_days if category=='Worker (Daily Basis)' else 26} Days", body_style)]
+        [Paragraph(f"<b>Employee ID:</b> {eid}", body_style), Paragraph(f"<b>Department:</b> {department}", body_style)],
+        [Paragraph(f"<b>Name:</b> {name}", body_style), Paragraph(f"<b>Category:</b> {category}", body_style)],
+        [Paragraph(f"<b>Designation:</b> {designation}", body_style), Paragraph(f"<b>Period:</b> {full_month}", body_style)]
     ]
-    info_table = Table(info_data, colWidths=[200, 320])
-    info_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#F7FAFC")),
-        ('PADDING', (0,0), (-1,-1), 6),
-        ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#E2E8F0")),
+    t_info = Table(info_data, colWidths=[260, 260])
+    t_info.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
     ]))
-    story.append(info_table)
-    story.append(Spacer(1, 15))
+    story.append(t_info)
+    story.append(Spacer(1, 20))
     
-    # স্যালারি ব্রেকডাউন টেবিল
-    story.append(Paragraph("Salary & Deductions Breakdown", section_style))
+    # ৩. ফাইনাল স্যালারি ব্রেকডাউন টেবিল
+    calc_salary = final_payable  # সিম্পল রিপ্রেজেন্টেশন
     
-    if category == 'Worker (Daily Basis)':
-        earnings_title = "Dynamic Monthly Base (Rate x Total Days)"
-        rate_label = f"Daily Wage Rate: Tk {base_salary:,.2f}"
-    else:
-        earnings_title = "Gross Base Salary"
-        rate_label = f"Monthly Fixed: Tk {base_salary:,.2f}"
-
     breakdown_data = [
-        [Paragraph("<b>Description</b>", bold_body), Paragraph("<b>Earnings (Tk)</b>", bold_body), Paragraph("<b>Deductions (Tk)</b>", bold_body)],
-        [Paragraph(earnings_title, body_style), Paragraph(f"{t_earn:,.2f}", body_style), Paragraph("-", body_style)],
-        [Paragraph(f"Absent Deduction ({absent_days} Days)", body_style), Paragraph("-", body_style), Paragraph(f"{ab_cut:,.2f}", body_style)],
-        [Paragraph(f"Fine / Penalty", body_style), Paragraph("-", body_style), Paragraph(f"{fine_amount:,.2f}", body_style)],
-        [Paragraph("<b>Total</b>", bold_body), Paragraph(f"<b>{t_earn:,.2f}</b>", bold_body), Paragraph(f"<b>{t_ded:,.2f}</b>", bold_body)],
-        [Paragraph(f"<b>NET PAYABLE SALARY ({rate_label})</b>", bold_body), Paragraph(f"<b>Tk {net_p:,.2f}</b>", bold_body), Paragraph("", body_style)]
+        [Paragraph("<b>Description</b>", bold_style), Paragraph("<b>Amount (BDT)</b>", bold_style)],
+        [Paragraph("Attendance Status", body_style), Paragraph(f"Present: {present_days} Days | Absent: {absent_days} Days", body_style)],
+        [Paragraph("Total Penalty / Fine Deducted", body_style), Paragraph(f"Tk {fine_amount:,.2f}", body_style)],
+        [Paragraph("<b>Net Payable Salary (Final)</b>", bold_style), Paragraph(f"<b>Tk {final_payable:,.2f}</b>", bold_style)]
     ]
     
-    bd_table = Table(breakdown_data, colWidths=[260, 130, 130])
-    bd_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#2B6CB0")),
-        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('PADDING', (0,0), (-1,-1), 8),
-        ('GRID', (0,0), (-1,-2), 0.5, colors.HexColor("#CBD5E0")),
-        ('BACKGROUND', (0,-2), (-1,-1), colors.HexColor("#EDF2F7")),
-        ('LINEABOVE', (0,-2), (-1,-2), 1.5, colors.HexColor("#1A365D")),
-        ('SPAN', (0,-1), (1,-1)),
+    t_breakdown = Table(breakdown_data, colWidths=[320, 200])
+    t_breakdown.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#2F5597')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.whitesmoke),
+        ('ALIGN', (1,0), (1,-1), 'RIGHT'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ('TOPPADDING', (0,0), (-1,-1), 8),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#D9D9D9')),
+        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#F2F4F7')),
     ]))
-    
-    # হেডার টেক্সট হোয়াইট করার জন্য কাস্টম ফিক্স
-    for i in range(3):
-        breakdown_data[0][i].style.textColor = colors.white
-
-    story.append(bd_table)
+    story.append(t_breakdown)
     story.append(Spacer(1, 40))
     
-    # সিগনেচার লাইন
-    sig_data = [
-        [Paragraph("____________________________<br/><b>Prepared By (Accounts)</b>", body_style), 
-         Paragraph("____________________________<br/><b>Approved By (Management)</b>", body_style)]
-    ]
-    sig_table = Table(sig_data, colWidths=[270, 270])
-    sig_table.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER')]))
-    story.append(sig_table)
-
+    # ৪. সিগনেচার সেকশন (যদি গিটহাবে signature.png ফাইলটি থাকে)
+    sig_element = Paragraph("_______________________<br/><b>Authorized Signature</b>", body_style)
+    
+    if os.path.exists(sig_path):
+        try:
+            sig_img = Image(sig_path, width=90, height=35)
+            sig_img.hAlign = 'LEFT'
+            sig_data = [[sig_img], [sig_element]]
+            t_sig = Table(sig_data, colWidths=[200])
+            t_sig.setStyle(TableStyle([('BOTTOMPADDING', (0,0), (-1,-1), 2)]))
+            story.append(t_sig)
+        except Exception:
+            story.append(sig_element)
+    else:
+        story.append(sig_element)
+        
+    # PDF ফাইল বিল্ড করা
     doc.build(story)
