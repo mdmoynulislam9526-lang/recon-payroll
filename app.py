@@ -43,13 +43,11 @@ col1, col2 = st.columns([1, 2.3])
 with col1:
     st.header("➕ Add New Person")
     
-    # ইনপুট ভ্যালুগুলো সেশন স্টেটে ধরে রাখার ব্যবস্থা (যাতে ভুলের কারণে মুছে না যায়)
     if "emp_id_val" not in st.session_state: st.session_state.emp_id_val = ""
     if "name_val" not in st.session_state: st.session_state.name_val = ""
     if "desg_val" not in st.session_state: st.session_state.desg_val = ""
     if "salary_val" not in st.session_state: st.session_state.salary_val = ""
 
-    # clear_on_submit=True দেওয়া হলো যাতে সাবমিট সফল হলে স্ট্রিমলিট অটো ফরম খালি করে দেয়
     with st.form("employee_form", clear_on_submit=True):
         input_id = st.text_input("ID (Numbers only, e.g., 101)", value=st.session_state.emp_id_val).strip()
         name = st.text_input("Name", value=st.session_state.name_val)
@@ -62,7 +60,6 @@ with col1:
         salary = st.text_input("Gross Salary / Daily Wage Rate (Tk)", value=st.session_state.salary_val)
         
         if st.form_submit_button("Add to Database", use_container_width=True, type="primary"):
-            # ভ্যালিডেশন চেক করার সময় সাময়িকভাবে সেশন স্টেটে ডাটা ধরে রাখা (যাতে ভুল হলে ইনপুট মুছে না যায়)
             st.session_state.emp_id_val = input_id
             st.session_state.name_val = name
             st.session_state.desg_val = designation
@@ -70,11 +67,8 @@ with col1:
             
             if not (input_id and name and designation and salary):
                 st.error("Please fill all fields!")
-            
-            # আইডি ভ্যালিডেশন: শুধু সংখ্যা হতে হবে
             elif not re.match(r"^[0-9]+$", input_id):
                 st.error("⚠️ Invalid ID Format! ID must only contain numbers (No letters or spaces allowed). e.g., 101, 2045")
-                
             else:
                 try:
                     conn = get_db_connection()
@@ -82,15 +76,11 @@ with col1:
                                    (input_id, name, designation, category, department, float(salary)))
                     conn.commit()
                     conn.close()
-                    
                     st.success(f"{name} successfully added!")
-                    
-                    # ডাটাবেজে সফলভাবে যুক্ত হওয়ার পরই কেবল সেশন স্টেট পুরো খালি করে দেওয়া হবে
                     st.session_state.emp_id_val = ""
                     st.session_state.name_val = ""
                     st.session_state.desg_val = ""
                     st.session_state.salary_val = ""
-                    
                     st.rerun()
                 except sqlite3.IntegrityError:
                     st.error(f"⚠️ Warning: Employee ID '{input_id}' already exists!")
@@ -119,7 +109,7 @@ def render_inline_management(r, prefix=""):
                 cat_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
                 ch_cat = st.selectbox("Edit Category", cat_list, index=cat_list.index(ecat) if ecat in cat_list else 0)
                 ch_desg = st.text_input("Edit Designation", value=edesg)
-                ch_salary = st.text_input("Edit Salary/Rate", value=str(esalary))
+                ch_salary = st.text_input("Edit Salary/Rate", value=str(ch_salary))
                 
                 b1, b2 = st.columns(2)
                 with b1:
@@ -135,24 +125,6 @@ def render_inline_management(r, prefix=""):
                     if st.form_submit_button("Cancel", use_container_width=True):
                         st.session_state[f"emode_{prefix}_{eid}"] = False
                         st.rerun()
-
-        if st.session_state.get(f"dmode_{prefix}_{eid}", False):
-            st.warning(f"Remove **{ename} ({eid})**?")
-            dc1, dc2 = st.columns(2)
-            with dc1:
-                if st.button("Yes, Delete", key=f"c_del_{prefix}_{eid}", type="primary", use_container_width=True):
-                    conn = get_db_connection()
-                    conn.cursor().execute("DELETE FROM employees_final_version WHERE emp_id = ?", (eid,))
-                    conn.cursor().execute("DELETE FROM monthly_attendance_records WHERE emp_id = ?", (eid,))
-                    conn.commit()
-                    conn.close()
-                    st.session_state[f"dmode_{prefix}_{eid}"] = False
-                    st.rerun()
-            with dc2:
-                if st.button("Cancel", key=f"c_can_{prefix}_{eid}", use_container_width=True):
-                    st.session_state[f"dmode_{prefix}_{eid}"] = False
-                    st.rerun()
-        st.markdown("<hr style='margin:4px 0px; border-color:#eee;'>", unsafe_allow_html=True)
 
 # --- RIGHT SIDE: PAYROLL MANAGEMENT ---
 with col2:
@@ -226,7 +198,6 @@ with col2:
                     rec = saved_db_tracker.get(selected_emp[0], {"present": days_in_month if selected_emp[3] == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
                     
                     st.success(f"Selected: {selected_emp[1]} ({selected_emp[0]})")
-                    
                     calc_salary = selected_emp[5]
                     if selected_emp[3] != 'Worker (Daily Basis)' and rec['present'] < 26:
                         calc_salary = (selected_emp[5] / 26) * rec['present']
@@ -235,7 +206,6 @@ with col2:
                     net_final = net_p + (rec['ot_hrs'] * rec['ot_rate']) + rec['bonus'] - rec['advance']
                     
                     st.markdown(f"#### **Net Payable Salary:** Tk {net_final:,.2f}")
-                    
                     pdf_buf = BytesIO()
                     generate_pdf_bytes((selected_emp[0], selected_emp[1], selected_emp[2], selected_emp[3], selected_emp[4], calc_salary + (rec['ot_hrs'] * rec['ot_rate']) + rec['bonus'] - rec['advance']), full_month, rec['absent'], rec['fine'], rec['present'], pdf_buf)
                     st.download_button("📥 Download Pay Slip (PDF)", data=pdf_buf.getvalue(), file_name=f"PaySlip_{selected_emp[0]}_{select_m}.pdf", mime="application/pdf", use_container_width=True)
@@ -257,17 +227,10 @@ with col2:
                         
                         col_in1, col_in2, col_in3 = st.columns(3)
                         with col_in1:
-                            if r[3] == 'Worker (Daily Basis)':
-                                total_target_days = st.number_input("Total Target Month Days (Base)", 1, 100, int(rec['present'] + rec['absent']) if rec['absent'] > 0 else days_in_month, key=f"target_{r[0]}")
-                                a_d = st.number_input("Absent Days", 0, total_target_days, int(rec['absent']), key=f"a_{r[0]}")
-                                p_d = total_target_days - a_d
-                                st.markdown(f"📊 *Auto Present Calculated:* **{p_d} Days**")
-                            else:
-                                total_target_days = st.number_input("Total Target Month Days (Base)", 1, 100, int(rec['present'] + rec['absent']) if rec['absent'] > 0 else max(26, int(rec['present'])), key=f"target_{r[0]}")
-                                a_d = st.number_input("Absent Days", 0, total_target_days, int(rec['absent']), key=f"a_{r[0]}")
-                                p_d = total_target_days - a_d
-                                st.markdown(f"📊 *Auto Present Calculated:* **{p_d} Days**")
-                                
+                            total_target_days = st.number_input("Total Target Month Days (Base)", 1, 100, int(rec['present'] + rec['absent']) if rec['absent'] > 0 else (days_in_month if r[3] == 'Worker (Daily Basis)' else max(26, int(rec['present']))), key=f"target_{r[0]}")
+                            a_d = st.number_input("Absent Days", 0, total_target_days, int(rec['absent']), key=f"a_{r[0]}")
+                            p_d = total_target_days - a_d
+                            st.markdown(f"📊 *Auto Present Calculated:* **{p_d} Days**")
                             f_d = st.number_input("Penalty/Fine (Tk)", 0.0, value=float(rec['fine']), key=f"f_{r[0]}")
                         
                         with col_in2:
@@ -289,7 +252,7 @@ with col2:
                             """, (full_month, item['eid'], item['p'], item['a'], item['f'], item['oth'], item['otr'], item['bonus'], item['adv']))
                         conn.commit()
                         conn.close()
-                        st.success(f"Successfully saved records for {full_month} into system permanent storage!")
+                        st.success(f"Successfully saved records!")
                         st.rerun()
 
             st.markdown("### 👁️ Current Month Full Payroll Sheets Overview")
@@ -299,7 +262,6 @@ with col2:
             for cat_name, title_text in zip(categories_list, display_titles):
                 cat_rows = [r for r in rows if r[3] == cat_name]
                 tracker_table = []
-                
                 for r in cat_rows:
                     eid, name, desg, cat, dept, base_sal = r
                     rec = saved_db_tracker.get(eid, {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
@@ -309,15 +271,12 @@ with col2:
                         calc_salary = (base_sal / 26) * rec['present']
 
                     _, _, _, _, ab_cut, net_p, _ = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], cat, rec['present'])
-                    
-                    display_absent = rec['absent']
                     ot_total = rec['ot_hrs'] * rec['ot_rate']
                     final_payable = net_p + ot_total + rec['bonus'] - rec['advance']
                     
                     tracker_table.append({
                         "ID": eid, "Name": name, "Designation": desg, "Base Salary/Rate": f"Tk {base_sal:,.2f}",
-                        "Present Days": rec['present'], 
-                        "Absent Days": display_absent,
+                        "Present Days": rec['present'], "Absent Days": rec['absent'],
                         "Absent Cut": f"Tk {ab_cut:,.2f}", "Fine": f"Tk {rec['fine']:,.2f}",
                         "OT Earn": f"Tk {ot_total:,.2f}", "Bonus": f"Tk {rec['bonus']:,.2f}", "Advance Cut": f"Tk {rec['advance']:,.2f}",
                         "Net Payable": f"Tk {final_payable:,.2f}"
@@ -327,6 +286,8 @@ with col2:
                     st.dataframe(pd.DataFrame(tracker_table), use_container_width=True)
 
             st.markdown("---")
+            
+            # --- 🚀 সুপার ফিক্সড এক্সেল জেনারেটর কোড ---
             if st.button("🚀 Prepare & Download Full Excel Report", use_container_width=True):
                 ex_buf = BytesIO()
                 with pd.ExcelWriter(ex_buf, engine='openpyxl') as writer:
@@ -343,64 +304,48 @@ with col2:
                             _, _, _, _, ab_cut, net_p, total_earn = calculate_salary_breakdown(calc_salary, rec['absent'], rec['fine'], r[3], rec['present'])
                             ot_total = rec['ot_hrs'] * rec['ot_rate']
                             final_payable = net_p + ot_total + rec['bonus'] - rec['advance']
-                            display_absent = rec['absent']
                             
                             cat_table.append({
-                                "Employee ID": str(r[0]),  # আইডি বাধ্যতামূলক টেক্সট রাখা হলো
+                                "Employee ID": f"'{str(r[0])}",  # 🆕 এক্সেলকে ফোর্স করতে শুরুতে ' দেওয়া হলো যাতে অফিসারদের ০ আইডি কখনো না কাটে
                                 "Name": r[1], "Department": r[4], "Category": r[3], "Designation": r[2],
-                                "Base Salary/Rate": r[5], "Present Days": rec['present'], "Absent Days": display_absent,
+                                "Base Salary/Rate": r[5], "Present Days": rec['present'], "Absent Days": rec['absent'],
                                 "Absent Cut": round(ab_cut, 2), "Fine/Penalty": rec['fine'], "OT Earnings": round(ot_total, 2), 
                                 "Bonus": rec['bonus'], "Advance Deduct": rec['advance'], "Net Payable (Tk)": round(final_payable, 2)
                             })
                         
-                        df_cat = pd.DataFrame(cat_table) if cat_table else pd.DataFrame(columns=[
-                            "Employee ID", "Name", "Department", "Category", "Designation",
-                            "Base Salary/Rate", "Present Days", "Absent Days", "Absent Cut", 
-                            "Fine/Penalty", "OT Earnings", "Bonus", "Advance Deduct", "Net Payable (Tk)"
-                        ])
+                        df_cat = pd.DataFrame(cat_table) if cat_table else pd.DataFrame(columns=["Employee ID", "Name", "Department", "Category", "Designation", "Base Salary/Rate", "Present Days", "Absent Days", "Absent Cut", "Fine/Penalty", "OT Earnings", "Bonus", "Advance Deduct", "Net Payable (Tk)"])
                         
-                        # ৩ নম্বর রো থেকে ডেটা রাইট করা শুরু হবে
+                        # ডাটা ৪ নম্বর রো থেকে রাইট হবে
                         df_cat.to_excel(writer, index=False, sheet_name=s_name, startrow=3)
                         worksheet = writer.sheets[s_name]
                         
-                        # লোগো/কোম্পানি ব্যানার ডিজাইন (Row 1)
+                        # 🏢 লোগো ও মূল ব্যানার টাইটেল (Row 1)
                         worksheet.merge_cells("A1:N1")
                         title_cell = worksheet["A1"]
-                        title_cell.value = "🏢 RECON LABORATORIES LTD."
+                        title_cell.value = "🏢 RECON LABORATORIES LTD. (PAYROLL SYSTEM)"
                         from openpyxl.styles import Font, PatternFill, Alignment
-                        title_cell.font = Font(name="Calibri", size=16, bold=True, color="FFFFFF")
+                        title_cell.font = Font(name="Arial", size=16, bold=True, color="FFFFFF")
                         title_cell.fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
                         title_cell.alignment = Alignment(horizontal="center", vertical="center")
-                        worksheet.row_dimensions[1].height = 40
+                        worksheet.row_dimensions[1].height = 45 # বড় এবং স্পষ্ট হাইট
                         
-                        # সাব-হেডার রিপোর্ট ইনফো (Row 2)
+                        # সাব-হেডার ইনফো (Row 2)
                         worksheet.merge_cells("A2:N2")
                         subtitle_cell = worksheet["A2"]
-                        subtitle_cell.value = f"Monthly Payroll Sheet — Category: {cat_name} ({full_month})"
-                        subtitle_cell.font = Font(name="Calibri", size=11, italic=True, bold=True, color="000000")
+                        subtitle_cell.value = f"Category Sheet: {cat_name} — Generated On: {full_month}"
+                        subtitle_cell.font = Font(name="Arial", size=11, italic=True, bold=True, color="000000")
                         subtitle_cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
                         subtitle_cell.alignment = Alignment(horizontal="center", vertical="center")
                         worksheet.row_dimensions[2].height = 25
                         
-                        # রো ৩ (ফাঁকা স্পেসার) এর হাইট ফিক্স করা
-                        worksheet.row_dimensions[3].height = 12
-                        worksheet.row_dimensions[4].height = 25 # কলাম হেডারের রো হাইট
+                        # রো ৩ এবং ৪ (কলাম হেডার) এর হাইট ফিক্স
+                        worksheet.row_dimensions[3].height = 15
+                        worksheet.row_dimensions[4].height = 28
                         
-                        # 🆕 প্রতিটি কলামের জন্য একদম সুনির্দিষ্ট এবং পর্যাপ্ত চওড়া ফিক্সড সাইজ (যাতে কোনো লেখা না কাটে)
-                        worksheet.column_dimensions['A'].width = 18  # Employee ID
-                        worksheet.column_dimensions['B'].width = 28  # Name
-                        worksheet.column_dimensions['C'].width = 25  # Department
-                        worksheet.column_dimensions['D'].width = 22  # Category
-                        worksheet.column_dimensions['E'].width = 25  # Designation
-                        worksheet.column_dimensions['F'].width = 22  # Base Salary/Rate
-                        worksheet.column_dimensions['G'].width = 16  # Present Days
-                        worksheet.column_dimensions['H'].width = 16  # Absent Days
-                        worksheet.column_dimensions['I'].width = 18  # Absent Cut
-                        worksheet.column_dimensions['J'].width = 18  # Fine/Penalty
-                        worksheet.column_dimensions['K'].width = 18  # OT Earnings
-                        worksheet.column_dimensions['L'].width = 16  # Bonus
-                        worksheet.column_dimensions['M'].width = 18  # Advance Deduct
-                        worksheet.column_dimensions['N'].width = 22  # Net Payable (Tk)
+                        # 🆕 কলামের ঘর পারফেক্ট করার চূড়ান্ত মেথড (লুপের একদম বাইরে স্বাধীনভাবে প্রয়োগ)
+                        widths_dict = {'A': 20, 'B': 30, 'C': 26, 'D': 22, 'E': 26, 'F': 22, 'G': 16, 'H': 16, 'I': 18, 'J': 18, 'K': 18, 'L': 16, 'M': 18, 'N': 25}
+                        for col_letter, target_width in widths_dict.items():
+                            worksheet.column_dimensions[col_letter].width = target_width
 
                 st.download_button(label="📥 Download Now", data=ex_buf.getvalue(), file_name=f"RECON_Advanced_Payroll_{select_m}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
     else: st.info("Database is empty. Please add people from the left panel.")
