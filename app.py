@@ -346,7 +346,7 @@ with col2:
                             display_absent = rec['absent']
                             
                             cat_table.append({
-                                "Employee ID": str(r[0]),  # আইডি টেক্সট রাখা হলো যাতে ০ না কাটে
+                                "Employee ID": str(r[0]),  # আইডি বাধ্যতামূলক টেক্সট রাখা হলো
                                 "Name": r[1], "Department": r[4], "Category": r[3], "Designation": r[2],
                                 "Base Salary/Rate": r[5], "Present Days": rec['present'], "Absent Days": display_absent,
                                 "Absent Cut": round(ab_cut, 2), "Fine/Penalty": rec['fine'], "OT Earnings": round(ot_total, 2), 
@@ -359,21 +359,19 @@ with col2:
                             "Fine/Penalty", "OT Earnings", "Bonus", "Advance Deduct", "Net Payable (Tk)"
                         ])
                         
-                        # 🆕 এক্সেল শিটের ১ ও ২ নম্বর লাইনে লোগো ব্যানার ও হেডার যুক্ত করার প্রফেশনাল লজিক
-                        workbook = writer.book
-                        # ডেটা ১ নম্বর লাইনের বদলে ৪ নম্বর লাইন থেকে রাইট করা শুরু হবে
+                        # ৩ নম্বর রো থেকে ডেটা রাইট করা শুরু হবে
                         df_cat.to_excel(writer, index=False, sheet_name=s_name, startrow=3)
                         worksheet = writer.sheets[s_name]
                         
-                        # লোগো/কোম্পানি টাইটেল ব্যানার ডিজাইন (Row 1)
+                        # লোগো/কোম্পানি ব্যানার ডিজাইন (Row 1)
                         worksheet.merge_cells("A1:N1")
                         title_cell = worksheet["A1"]
                         title_cell.value = "🏢 RECON LABORATORIES LTD."
                         from openpyxl.styles import Font, PatternFill, Alignment
                         title_cell.font = Font(name="Calibri", size=16, bold=True, color="FFFFFF")
-                        title_cell.fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid") # নেভি ব্লু থিম লোগো ব্যানার
+                        title_cell.fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
                         title_cell.alignment = Alignment(horizontal="center", vertical="center")
-                        worksheet.row_dimensions[1].height = 35
+                        worksheet.row_dimensions[1].height = 40
                         
                         # সাব-হেডার রিপোর্ট ইনফো (Row 2)
                         worksheet.merge_cells("A2:N2")
@@ -382,31 +380,27 @@ with col2:
                         subtitle_cell.font = Font(name="Calibri", size=11, italic=True, bold=True, color="000000")
                         subtitle_cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
                         subtitle_cell.alignment = Alignment(horizontal="center", vertical="center")
-                        worksheet.row_dimensions[2].height = 22
+                        worksheet.row_dimensions[2].height = 25
                         
-                        # ফাঁকা রো ৩ এর হাইট নির্ধারণ
-                        worksheet.row_dimensions[3].height = 10
+                        # রো ৩ (ফাঁকা স্পেসার) এর হাইট ফিক্স করা
+                        worksheet.row_dimensions[3].height = 12
+                        worksheet.row_dimensions[4].height = 25 # কলাম হেডারের রো হাইট
                         
-                        # 🆕 প্রতিটি কলামের ঘর মেপে মেপে ফিক্সড সাইজ দেওয়া হলো যাতে কখনো না কাটে
-                        column_widths = {
-                            'A': 16,  # Employee ID
-                            'B': 24,  # Name
-                            'C': 22,  # Department
-                            'D': 18,  # Category
-                            'E': 22,  # Designation
-                            'F': 18,  # Base Salary/Rate
-                            'G': 14,  # Present Days
-                            'H': 14,  # Absent Days
-                            'I': 15,  # Absent Cut
-                            'J': 15,  # Fine/Penalty
-                            'K': 15,  # OT Earnings
-                            'L': 14,  # Bonus
-                            'M': 15,  # Advance Deduct
-                            'N': 18   # Net Payable
-                        }
-                        
-                        for col_letter, width in column_widths.items():
-                            worksheet.column_dimensions[col_letter].width = width
+                        # 🆕 প্রতিটি কলামের জন্য একদম সুনির্দিষ্ট এবং পর্যাপ্ত চওড়া ফিক্সড সাইজ (যাতে কোনো লেখা না কাটে)
+                        worksheet.column_dimensions['A'].width = 18  # Employee ID
+                        worksheet.column_dimensions['B'].width = 28  # Name
+                        worksheet.column_dimensions['C'].width = 25  # Department
+                        worksheet.column_dimensions['D'].width = 22  # Category
+                        worksheet.column_dimensions['E'].width = 25  # Designation
+                        worksheet.column_dimensions['F'].width = 22  # Base Salary/Rate
+                        worksheet.column_dimensions['G'].width = 16  # Present Days
+                        worksheet.column_dimensions['H'].width = 16  # Absent Days
+                        worksheet.column_dimensions['I'].width = 18  # Absent Cut
+                        worksheet.column_dimensions['J'].width = 18  # Fine/Penalty
+                        worksheet.column_dimensions['K'].width = 18  # OT Earnings
+                        worksheet.column_dimensions['L'].width = 16  # Bonus
+                        worksheet.column_dimensions['M'].width = 18  # Advance Deduct
+                        worksheet.column_dimensions['N'].width = 22  # Net Payable (Tk)
 
                 st.download_button(label="📥 Download Now", data=ex_buf.getvalue(), file_name=f"RECON_Advanced_Payroll_{select_m}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
     else: st.info("Database is empty. Please add people from the left panel.")
