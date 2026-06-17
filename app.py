@@ -266,7 +266,6 @@ with col2:
                                 total_target_days = st.number_input("Total Target Month Days (Base)", 1, 100, int(rec['present'] + rec['absent']) if rec['absent'] > 0 else max(26, int(rec['present'])), key=f"target_{r[0]}")
                                 a_d = st.number_input("Absent Days", 0, total_target_days, int(rec['absent']), key=f"a_{r[0]}")
                                 p_d = total_target_days - a_d
-                                m_cut_val = (r[5] / 26) * p_d if p_d < 26 else r[5]
                                 st.markdown(f"📊 *Auto Present Calculated:* **{p_d} Days**")
                                 
                             f_d = st.number_input("Penalty/Fine (Tk)", 0.0, value=float(rec['fine']), key=f"f_{r[0]}")
@@ -330,7 +329,6 @@ with col2:
             st.markdown("---")
             if st.button("🚀 Prepare & Download Full Excel Report", use_container_width=True):
                 ex_buf = BytesIO()
-                # 🆕 openpyxl ইঞ্জিন ব্যবহার করে এক্সেল ফাইল রাইট করা এবং ডিজাইন ফিক্স করা
                 with pd.ExcelWriter(ex_buf, engine='openpyxl') as writer:
                     sheet_names = ["Managers", "Officers", "Workers_Permanent", "Workers_Daily"]
                     for cat_name, s_name in zip(categories_list, sheet_names):
@@ -348,7 +346,7 @@ with col2:
                             display_absent = rec['absent']
                             
                             cat_table.append({
-                                "Employee ID": str(r[0]),  # 🆕 আইডি-কে এক্সেলের জন্য টেক্সট ফরম্যাটে কনভার্ট করা হলো যাতে শূন্য না কাটে
+                                "Employee ID": str(r[0]),  # আইডি টেক্সট রাখা হলো যাতে ০ না কাটে
                                 "Name": r[1], "Department": r[4], "Category": r[3], "Designation": r[2],
                                 "Base Salary/Rate": r[5], "Present Days": rec['present'], "Absent Days": display_absent,
                                 "Absent Cut": round(ab_cut, 2), "Fine/Penalty": rec['fine'], "OT Earnings": round(ot_total, 2), 
@@ -360,15 +358,55 @@ with col2:
                             "Base Salary/Rate", "Present Days", "Absent Days", "Absent Cut", 
                             "Fine/Penalty", "OT Earnings", "Bonus", "Advance Deduct", "Net Payable (Tk)"
                         ])
-                        df_cat.to_excel(writer, index=False, sheet_name=s_name)
                         
-                        # 🆕 ঘরের ম্যাপ এবং সাইজ অটোমেটিক লেখা অনুযায়ী এডজাস্ট করার জন্য লজিক
+                        # 🆕 এক্সেল শিটের ১ ও ২ নম্বর লাইনে লোগো ব্যানার ও হেডার যুক্ত করার প্রফেশনাল লজিক
                         workbook = writer.book
+                        # ডেটা ১ নম্বর লাইনের বদলে ৪ নম্বর লাইন থেকে রাইট করা শুরু হবে
+                        df_cat.to_excel(writer, index=False, sheet_name=s_name, startrow=3)
                         worksheet = writer.sheets[s_name]
-                        for col in worksheet.columns:
-                            max_len = max(len(str(cell.value or '')) for cell in col)
-                            col_letter = col[0].column_letter
-                            worksheet.column_dimensions[col_letter].width = max(max_len + 3, 12) # অটো-ফিট উইথ সেটিং
+                        
+                        # লোগো/কোম্পানি টাইটেল ব্যানার ডিজাইন (Row 1)
+                        worksheet.merge_cells("A1:N1")
+                        title_cell = worksheet["A1"]
+                        title_cell.value = "🏢 RECON LABORATORIES LTD."
+                        from openpyxl.styles import Font, PatternFill, Alignment
+                        title_cell.font = Font(name="Calibri", size=16, bold=True, color="FFFFFF")
+                        title_cell.fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid") # নেভি ব্লু থিম লোগো ব্যানার
+                        title_cell.alignment = Alignment(horizontal="center", vertical="center")
+                        worksheet.row_dimensions[1].height = 35
+                        
+                        # সাব-হেডার রিপোর্ট ইনফো (Row 2)
+                        worksheet.merge_cells("A2:N2")
+                        subtitle_cell = worksheet["A2"]
+                        subtitle_cell.value = f"Monthly Payroll Sheet — Category: {cat_name} ({full_month})"
+                        subtitle_cell.font = Font(name="Calibri", size=11, italic=True, bold=True, color="000000")
+                        subtitle_cell.fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+                        subtitle_cell.alignment = Alignment(horizontal="center", vertical="center")
+                        worksheet.row_dimensions[2].height = 22
+                        
+                        # ফাঁকা রো ৩ এর হাইট নির্ধারণ
+                        worksheet.row_dimensions[3].height = 10
+                        
+                        # 🆕 প্রতিটি কলামের ঘর মেপে মেপে ফিক্সড সাইজ দেওয়া হলো যাতে কখনো না কাটে
+                        column_widths = {
+                            'A': 16,  # Employee ID
+                            'B': 24,  # Name
+                            'C': 22,  # Department
+                            'D': 18,  # Category
+                            'E': 22,  # Designation
+                            'F': 18,  # Base Salary/Rate
+                            'G': 14,  # Present Days
+                            'H': 14,  # Absent Days
+                            'I': 15,  # Absent Cut
+                            'J': 15,  # Fine/Penalty
+                            'K': 15,  # OT Earnings
+                            'L': 14,  # Bonus
+                            'M': 15,  # Advance Deduct
+                            'N': 18   # Net Payable
+                        }
+                        
+                        for col_letter, width in column_widths.items():
+                            worksheet.column_dimensions[col_letter].width = width
 
                 st.download_button(label="📥 Download Now", data=ex_buf.getvalue(), file_name=f"RECON_Advanced_Payroll_{select_m}.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
     else: st.info("Database is empty. Please add people from the left panel.")
