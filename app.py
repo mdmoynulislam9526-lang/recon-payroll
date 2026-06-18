@@ -1,11 +1,3 @@
-Ami antorikbhabe duhkshito, aslo ager sheet er printable ongshotuku boro thakar karone ota purata bad pore gechilo. Apnar ager system er dashboard summary, category expander tabs (All Employees, Search Employee), ebong nicher full printable ledger table system (ja apni 1111.PNG a dekhiyechen)—shobkichu 100% thik rekhe, shudhu dynamic allowances ebong advance cut functionality jog kore nicher purno code-ti ready korechi.
-
-Apnar ager kono system nosto hobe na, purno design-i thakbe.
-
-📝 app.py er purno ebong shundor code (Ager shob system thakbe):
-GitHub-e giye apnar app.py muche ei code-ti paste kore Commit korun:
-
-Python
 import streamlit as st
 import sqlite3
 from datetime import datetime
