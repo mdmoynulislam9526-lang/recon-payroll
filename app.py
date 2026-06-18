@@ -1,3 +1,8 @@
+আপনার রিকোয়ারমেন্ট একদম পরিষ্কার। পে-স্লিপের নিচে তিনটি সিগনেচার অপশনের জায়গায় এখন শুধু Authorized Signature-এর অংশটি থাকবে এবং তার ঠিক ওপরে অফিসিয়াল সিল (Official Seal) দেওয়ার জন্য একটি সুন্দর গোল বক্স বা জায়গা (Placeholder) যুক্ত করে দিচ্ছি।
+
+নিচে সম্পূর্ণ আপডেট করা কোডটি দেওয়া হলো। আগের মতোই এটি সম্পূর্ণ কপি করে আপনার app.py ফাইলে পেস্ট (Replace) করে Commit করে দিন:
+
+Python
 import streamlit as st
 import sqlite3
 from datetime import datetime
@@ -200,7 +205,7 @@ with col2:
                 search_results = [r for r in rows if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()]
                 for emp in search_results: render_inline_management(emp, prefix="search_tab")
 
-        # --- TAB 1: INDIVIDUAL PAY SLIP (UPDATED PREVIEW) ---
+        # --- TAB 1: INDIVIDUAL PAY SLIP ---
         with tab1:
             pay_search = st.text_input("Enter Employee ID or Name for Pay Slip", key="pay_slip_search_input")
             if pay_search:
@@ -218,9 +223,8 @@ with col2:
                     total_ot = rec['ot_hrs'] * rec['ot_rate']
                     net_final = net_p + total_ot + rec['bonus']
                     
-                    # লাইভ ক্লিয়ার এইচটিএমএল প্রিভিউ প্যানেল (ম্যাচিং উইথ মেইন শীট হেডার)
                     payslip_preview_html = f"""
-                    <div style="font-family: 'Arial', sans-serif; padding: 25px; background: white; color: black; border: 1px solid #d9d9d9; border-radius: 8px; max-width: 650px; margin: 15px auto;">
+                    <div style="font-family: 'Arial', sans-serif; padding: 25px; background: white; color: black; border: 1px solid #d9d9d9; border-radius: 8px; max-width: 650px; margin: 15px auto; box-sizing: border-box;">
                         <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 12px; margin-bottom: 15px;">
                             {"<div style='margin-bottom: 10px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 65px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
                             <p style="margin: 5px 0 0 0; font-size: 13px; color: #1F4E78; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Employee Pay Slip</p>
@@ -294,14 +298,17 @@ with col2:
                             </tbody>
                         </table>
                         
-                        <div style="margin-top: 40px; display: flex; justify-content: space-between; font-size: 11px; color: #555;">
-                            <div style="border-top: 1px solid #888; width: 140px; text-align: center; padding-top: 5px;">Prepared By</div>
-                            <div style="border-top: 1px solid #888; width: 140px; text-align: center; padding-top: 5px;">Receiver Signature</div>
-                            <div style="border-top: 1px solid #888; width: 140px; text-align: center; padding-top: 5px;">Authorized Approval</div>
+                        <div style="margin-top: 50px; display: flex; justify-content: flex-end; align-items: flex-end; gap: 40px;">
+                            <div style="text-align: center;">
+                                <div style="width: 65px; height: 65px; border: 1px dashed #aaa; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 9px; color: #888; margin: 0 auto 5px auto; background-color: #fafafa;">Official Seal</div>
+                            </div>
+                            <div style="text-align: center; width: 160px;">
+                                <div style="border-top: 1px solid #000; padding-top: 6px; font-size: 11px; font-weight: bold; color: #333;">Authorized Signature</div>
+                            </div>
                         </div>
                     </div>
                     """
-                    st.components.v1.html(payslip_preview_html, height=420, scrolling=True)
+                    st.components.v1.html(payslip_preview_html, height=450, scrolling=True)
                     
                     pdf_emp_data = (
                         selected_emp[0], selected_emp[1], selected_emp[2], selected_emp[3], selected_emp[4],
