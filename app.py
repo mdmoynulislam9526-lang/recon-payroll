@@ -5,6 +5,8 @@ import calendar
 from io import BytesIO
 import pandas as pd
 import re
+import os
+import base64
 from calculations import calculate_salary_breakdown, generate_pdf_bytes
 
 st.set_page_config(page_title="RECON Payroll System", layout="wide", page_icon="💼")
@@ -33,6 +35,25 @@ init_db()
 
 def get_db_connection():
     return sqlite3.connect("payroll_v5.db", check_same_thread=False)
+
+# --- LOGO BASE64 CONVERSION ---
+logo_base64_str = ""
+current_dir = os.path.dirname(os.path.abspath(__file__))
+local_logo_path = os.path.join(current_dir, "logo.png")
+if os.path.exists(local_logo_path):
+    with open(local_logo_path, "rb") as img_file:
+        logo_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
+
+# --- MAIN HEADER WITH LOGO ---
+if logo_base64_str:
+    st.markdown(
+        f"""
+        <div style="text-align: center; margin-bottom: 20px;">
+            <img src="data:image/png;base64,{logo_base64_str}" style="width:250px; height:60px; object-fit:contain;">
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
 
 st.title("💼 RECON LABORATORIES LTD - Advanced Payroll Management System")
 st.markdown("---")
@@ -152,16 +173,22 @@ with col2:
         db_records = conn.cursor().execute("SELECT * FROM monthly_attendance_records WHERE month_year=?", (full_month,)).fetchall()
         conn.close()
         
-        saved_db_tracker = {r[1]: {"present": r[2], "absent": r[3], "fine": r[4], "ot_hrs": r[5], "ot_rate": r[6], "bonus": r[7], "advance": r[8]} for r in db_records}
+        # ডাটাবেজ ট্র্যাকারের সঠিক ডিকশনারি ম্যাপিং ফিক্স
+        saved_db_tracker = {str(r[1]): {"present": r[2], "absent": r[3], "fine": r[4], "ot_hrs": r[5], "ot_rate": r[6], "bonus": r[7], "advance": r[8]} for r in db_records}
 
+        # --- FINANCIAL DASHBOARD LOGIC FIX ---
         total_payout = 0.0
         for r in rows:
             eid, _, _, cat, _, base_sal = r
-            rec = saved_db_tracker.get(eid, {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
+            # ডাটাবেজে রেকর্ড না থাকলে ডিফল্ট ভ্যালু সেট হবে
+            rec = saved_db_tracker.get(str(eid), {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
             
-            _, house_rent, medical, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(base_sal, rec['absent'], rec['fine'], cat, rec['present'], rec['advance'])
-            net_final = net_p + (rec['ot_hrs'] * rec['ot_rate']) + rec['bonus']
-            total_payout += net_final
+            _, _, _, _, _, net_p, _ = calculate_salary_breakdown(
+                base_sal, rec['absent'], rec['fine'], cat, rec['present'], rec['advance']
+            )
+            ot_total = rec['ot_hrs'] * rec['ot_rate']
+            final_payable = net_p + ot_total + rec['bonus']
+            total_payout += final_payable
 
         st.markdown("### 📊 Financial Dashboard Summary")
         m_col1, m_col2 = st.columns(2)
@@ -192,7 +219,7 @@ with col2:
                 pay_results = [r for r in rows if pay_search.lower() in r[0].lower() or pay_search.lower() in r[1].lower()]
                 if pay_results:
                     selected_emp = pay_results[0]
-                    rec = saved_db_tracker.get(selected_emp[0], {"present": days_in_month if selected_emp[3] == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
+                    rec = saved_db_tracker.get(str(selected_emp[0]), {"present": days_in_month if selected_emp[3] == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
                     
                     st.success(f"Selected: {selected_emp[1]} ({selected_emp[0]})")
                     
@@ -223,7 +250,7 @@ with col2:
                 with st.form("bulk_sheet_form_v5"):
                     for r in filtered_rows:
                         st.markdown(f"**🔹 {r[0]} - {r[1]}** ({r[2]})")
-                        rec = saved_db_tracker.get(r[0], {"present": days_in_month if r[3] == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
+                        rec = saved_db_tracker.get(str(r[0]), {"present": days_in_month if r[3] == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
                         
                         col_in1, col_in2, col_in3 = st.columns(3)
                         with col_in1:
@@ -254,15 +281,14 @@ with col2:
                         st.success(f"Successfully saved records!")
                         st.rerun()
 
-            # --- HTML/CSS PRINTABLE LEDGER SHEET SYSTEM WITH SIDE LOMBA LOGO & NO TEXT ---
+            # --- HTML/CSS PRINTABLE LEDGER SHEET SYSTEM ---
             st.markdown("---")
             st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
-            
-            # 🖼️ Loo ta side e lomba korar jonno img width/height and styling dynamic kora holo, company text delete
+
             print_html = f"""
             <div style="font-family: 'Arial', sans-serif; padding: 15px; background: white; color: black; border-radius: 8px;">
                 <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 12px; margin-bottom: 15px;">
-                    <img src="https://raw.githubusercontent.com/{st.experimental_user.to_dict().get('username', 'user') if hasattr(st, 'experimental_user') else 'user'}/recon-payroll/main/logo.png" style="width:200px; height:50px; object-fit:contain; margin-bottom:5px;" alt="Logo" onerror="this.style.display='none';">
+                    {"<img src='data:image/png;base64," + logo_base64_str + "' style='width:200px; height:50px; object-fit:contain; margin-bottom:5px;' alt='Logo'>" if logo_base64_str else ""}
                     <p style="margin: 5px 0 0 0; font-size: 14px; color: #1F4E78; font-weight: bold; text-transform: uppercase;">Employee Monthly Payroll Statement Sheet</p>
                     <span style="display: inline-block; margin-top: 6px; padding: 4px 15px; background: #E2EFDA; color: #375623; border-radius: 20px; font-size: 13px; font-weight: bold;">
                         Statement Period: {full_month}
@@ -305,7 +331,7 @@ with col2:
                 
                 for r in cat_rows:
                     eid, name, desg, cat, dept, base_sal = r
-                    rec = saved_db_tracker.get(eid, {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
+                    rec = saved_db_tracker.get(str(eid), {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
                     
                     gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(base_sal, rec['absent'], rec['fine'], cat, rec['present'], rec['advance'])
                     ot_total = rec['ot_hrs'] * rec['ot_rate']
