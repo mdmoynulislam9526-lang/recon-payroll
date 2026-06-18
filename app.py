@@ -272,18 +272,12 @@ with col2:
             st.markdown("---")
             st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
 
-            # হেডার লেআউট লোগো এবং টেক্সটের নিখুঁত ব্যালেন্সে সাজানো হয়েছে 
+            # শুধুমাত্র মূল ইমেজটি মাঝখানে সুন্দরভাবে দেখানোর ব্যবস্থা করা হয়েছে
             print_html = f"""
             <div style="font-family: 'Arial', sans-serif; padding: 20px; background: white; color: black; border-radius: 8px;">
                 <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 14px; margin-bottom: 18px;">
-                    <div style="display: flex; justify-content: center; align-items: center; gap: 25px; max-width: 850px; margin: 0 auto 10px auto;">
-                        {"<div style='flex-shrink: 0;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 55px; width: auto; object-fit: contain; display: block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
-                        <div style="text-align: left; line-height: 1.3;">
-                            <h2 style="margin: 0; font-size: 18px; color: #1F4E78; font-weight: bold; letter-spacing: 0.5px;">RECON LABORATORIES LTD</h2>
-                            <p style="margin: 2px 0 0 0; font-size: 10px; color: #444; font-weight: normal;">Most Quality Controlled Organization<br>Address: Bank Colony, Savar, Dhaka-1340, Bangladesh.<br>Mobile: 01842788771, 01842788772, 01784544841</p>
-                        </div>
-                    </div>
-                    <p style="margin: 12px 0 4px 0 !important; font-size: 14px !important; color: #1F4E78 !important; font-weight: bold !important; text-transform: uppercase !important; letter-spacing: 0.8px !important;">Employee Monthly Payroll Statement Sheet</p>
+                    {"<div style='margin-bottom: 10px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 75px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
+                    <p style="margin: 8px 0 4px 0 !important; font-size: 14px !important; color: #1F4E78 !important; font-weight: bold !important; text-transform: uppercase !important; letter-spacing: 0.8px !important;">Employee Monthly Payroll Statement Sheet</p>
                     <span style="display: inline-block; margin-top: 4px; padding: 3px 14px; background: #E2EFDA; color: #375623; border-radius: 20px; font-size: 12px; font-weight: bold;">
                         Statement Period: {full_month}
                     </span>
