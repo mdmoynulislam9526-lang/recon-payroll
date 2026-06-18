@@ -4,7 +4,7 @@ from datetime import datetime
 import calendar
 from io import BytesIO
 import pandas as pd
-import re  # ID format check
+import re
 from calculations import calculate_salary_breakdown, generate_pdf_bytes
 
 st.set_page_config(page_title="RECON Payroll System", layout="wide", page_icon="💼")
@@ -154,14 +154,12 @@ with col2:
         
         saved_db_tracker = {r[1]: {"present": r[2], "absent": r[3], "fine": r[4], "ot_hrs": r[5], "ot_rate": r[6], "bonus": r[7], "advance": r[8]} for r in db_records}
 
-        # --- 📊 FINANCIAL DASHBOARD SUMMARY LOOP FIXED ---
         total_payout = 0.0
         for r in rows:
             eid, _, _, cat, _, base_sal = r
             rec = saved_db_tracker.get(eid, {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
             
-            # 💡 Sothik bhabe calculate_salary_breakdown call kore and overtime, bonus add kora hocche
-            _, _, _, _, _, net_p, _ = calculate_salary_breakdown(base_sal, rec['absent'], rec['fine'], cat, rec['present'], rec['advance'])
+            _, house_rent, medical, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(base_sal, rec['absent'], rec['fine'], cat, rec['present'], rec['advance'])
             net_final = net_p + (rec['ot_hrs'] * rec['ot_rate']) + rec['bonus']
             total_payout += net_final
 
@@ -256,15 +254,16 @@ with col2:
                         st.success(f"Successfully saved records!")
                         st.rerun()
 
-            # --- HTML/CSS PRINTABLE LEDGER SHEET SYSTEM WITH RECON BANNER ---
+            # --- HTML/CSS PRINTABLE LEDGER SHEET SYSTEM WITH SIDE LOMBA LOGO & NO TEXT ---
             st.markdown("---")
             st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
             
+            # 🖼️ Loo ta side e lomba korar jonno img width/height and styling dynamic kora holo, company text delete
             print_html = f"""
             <div style="font-family: 'Arial', sans-serif; padding: 15px; background: white; color: black; border-radius: 8px;">
                 <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 12px; margin-bottom: 15px;">
-                    <h1 style="margin: 0; font-size: 28px; color: #1F4E78; font-weight: bold;">🏢 RECON LABORATORIES LTD.</h1>
-                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #555; font-weight: bold; text-transform: uppercase;">Advanced Employee Monthly Payroll Statement Sheet</p>
+                    <img src="https://raw.githubusercontent.com/{st.experimental_user.to_dict().get('username', 'user') if hasattr(st, 'experimental_user') else 'user'}/recon-payroll/main/logo.png" style="width:200px; height:50px; object-fit:contain; margin-bottom:5px;" alt="Logo" onerror="this.style.display='none';">
+                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #1F4E78; font-weight: bold; text-transform: uppercase;">Employee Monthly Payroll Statement Sheet</p>
                     <span style="display: inline-block; margin-top: 6px; padding: 4px 15px; background: #E2EFDA; color: #375623; border-radius: 20px; font-size: 13px; font-weight: bold;">
                         Statement Period: {full_month}
                     </span>
@@ -334,7 +333,7 @@ with col2:
 
             if has_any_data:
                 st.components.v1.html(print_html, height=600, scrolling=True)
-                if st.button("🖨️ CLICK HERE TO PRINT THIS FULL SHEET (WITH RECON LOGO)", use_container_width=True, type="primary"):
+                if st.button("🖨️ CLICK HERE TO PRINT THIS FULL SHEET", use_container_width=True, type="primary"):
                     st.components.v1.html(f"{print_html}<script>window.print();</script>", height=0)
             else:
                 st.info("No records loaded yet.")
