@@ -118,7 +118,8 @@ def render_inline_management(r, prefix=""):
     with st.container():
         col_info, col_act1, col_act2 = st.columns([3, 0.6, 0.6])
         with col_info:
-            st.markdown(f"**[{eid}] {ename}** — {edesg} ({edept}) | Salary: Tk {esalary:,.2f}")
+            # ম্যানেজমেন্ট প্যানেলেও কালার ও বোল্ড এফেক্ট দেওয়া হয়েছে
+            st.markdown(f"**<span style='color:#7F2020;'>[{eid}]</span> <span style='color:#1F4E78;'>{ename}</span>** — **<span style='color:#2F5597;'>{edesg}</span>** (**<span style='color:#A6A6A6;'>{edept}</span>**) | Salary: Tk {esalary:,.2f}", unsafe_allow_html=True)
         with col_act1:
             if st.button("Edit 📝", key=f"{prefix}_edit_{eid}", use_container_width=True):
                 st.session_state[f"emode_{prefix}_{eid}"] = True
@@ -232,7 +233,6 @@ with col2:
                     total_ot = rec['ot_hrs'] * rec['ot_rate']
                     net_final = net_p + total_ot + rec['bonus']
                     
-                    # Modernized Overlay System
                     sig_html_element = ""
                     if seal_base64_str:
                         sig_html_element += f"<img src='data:image/png;base64,{seal_base64_str}' style='max-height: 75px; width: auto; display: block; margin: 0 auto -50px auto; z-index: 8; position: relative; opacity: 0.82;' alt='Seal'>"
@@ -241,6 +241,7 @@ with col2:
                     if not sig_base64_str and not seal_base64_str:
                         sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[Images Not Found]</div>"
 
+                    # --- PAYSLIP DESIGN WITH CUSTOM COLORS AND BOLD TEXT ---
                     payslip_preview_html = f"""
                     <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; background: white; color: black; border: 1px solid #e0e0e0; border-radius: 12px; max-width: 650px; margin: 20px auto; box-sizing: border-box; box-shadow: 0 4px 20px rgba(0,0,0,0.07);">
                         <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 15px; margin-bottom: 18px;">
@@ -250,20 +251,20 @@ with col2:
                         </div>
                         <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 20px;">
                             <tr>
-                                <td style="padding: 6px 0; font-weight: bold; color: #666; width: 30%;">Employee ID:</td>
-                                <td style="padding: 6px 0; font-weight: bold; color: #000;">{selected_emp[0]}</td>
-                                <td style="padding: 6px 0; font-weight: bold; color: #666; width: 25%;">Department:</td>
-                                <td style="padding: 6px 0; color: #000;">{selected_emp[4]}</td>
+                                <td style="padding: 6px 0; font-weight: bold; color: #7F2020; width: 30%;">Employee ID:</td>
+                                <td style="padding: 6px 0; font-weight: bold; color: #7F2020;">{selected_emp[0]}</td>
+                                <td style="padding: 6px 0; font-weight: bold; color: #2F5597; width: 25%;">Department:</td>
+                                <td style="padding: 6px 0; color: #2F5597; font-weight: bold;">{selected_emp[4]}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 6px 0; font-weight: bold; color: #666;">Name:</td>
-                                <td style="padding: 6px 0; font-weight: bold; color: #1F4E78;">{selected_emp[1]}</td>
-                                <td style="padding: 6px 0; font-weight: bold; color: #666;">Designation:</td>
-                                <td style="padding: 6px 0; color: #000;">{selected_emp[2]}</td>
+                                <td style="padding: 6px 0; font-weight: bold; color: #555;">Name:</td>
+                                <td style="padding: 6px 0; font-weight: bold; color: #1F4E78; font-size: 14px;">{selected_emp[1]}</td>
+                                <td style="padding: 6px 0; font-weight: bold; color: #2F5597;">Designation:</td>
+                                <td style="padding: 6px 0; color: #2F5597; font-weight: bold;">{selected_emp[2]}</td>
                             </tr>
                             <tr>
-                                <td style="padding: 6px 0; font-weight: bold; color: #666;">Category:</td>
-                                <td style="padding: 6px 0; color: #000;">{selected_emp[3]}</td>
+                                <td style="padding: 6px 0; font-weight: bold; color: #4682B4;">Category:</td>
+                                <td style="padding: 6px 0; color: #4682B4; font-weight: bold;">{selected_emp[3]}</td>
                                 <td style="padding: 6px 0; font-weight: bold; color: #666;">Attendance:</td>
                                 <td style="padding: 6px 0; font-weight: bold; color: #2F5597;">{rec['present']}P / {rec['absent']}A</td>
                             </tr>
@@ -308,6 +309,7 @@ with col2:
                                     <td style="padding: 8px; text-align: right; border-bottom: 1px solid #e0e0e0; color: green;">{rec['bonus']:,.2f}</td>
                                     <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; padding-left: 15px;"></td>
                                     <td style="padding: 8px; text-align: right; border-bottom: 1px solid #e0e0e0;"></td>
+                                end html
                                 </tr>
                                 <tr style="background-color: #F8F9FA; font-weight: bold;">
                                     <td style="padding: 10px 8px; color: #1F4E78; font-size: 14px;">Net Payable Salary:</td>
@@ -431,15 +433,16 @@ with col2:
                     ot_total = rec['ot_hrs'] * rec['ot_rate']
                     final_payable = net_p + ot_total + rec['bonus']
                     
+                    # নিচের টেবিলেও কাস্টম কালার ও বোল্ড সিস্টেম প্রয়োগ করা হয়েছে
                     print_html += f"""
                             <tr style="text-align: center; background-color: white;">
-                                <td style="border: 1px solid #D9D9D9; padding: 7px; font-weight: bold;">{str(eid)}</td>
-                                <td style="border: 1px solid #D9D9D9; padding: 7px; text-align: left; font-weight: bold;">{name}</td>
-                                <td style="border: 1px solid #D9D9D9; padding: 7px; text-align: left;">{dept}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 7px; font-weight: bold; color: #7F2020;">{str(eid)}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 7px; text-align: left; font-weight: bold; color: #1F4E78;">{name}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 7px; text-align: left; font-weight: bold; color: #2F5597;">{dept}</td>
                                 <td style="border: 1px solid #D9D9D9; padding: 7px; text-align: right;">{base_sal:,.2f}</td>
                                 <td style="border: 1px solid #D9D9D9; padding: 7px; text-align: right; color: #555;">{house_rent:,.2f}</td>
                                 <td style="border: 1px solid #D9D9D9; padding: 7px; text-align: right; color: #555;">{medical:,.2f}</td>
-                                <td style="border: 1px solid #D9D9D9; padding: 7px;">{rec['present']}P / {rec['absent']}A</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 7px; color: #4682B4; font-weight: bold;">{rec['present']}P / {rec['absent']}A</td>
                                 <td style="border: 1px solid #D9D9D9; padding: 7px; text-align: right; color: red;">{ab_cut:,.2f}</td>
                                 <td style="border: 1px solid #D9D9D9; padding: 7px; text-align: right; color: red;">{rec['fine']:,.2f}</td>
                                 <td style="border: 1px solid #D9D9D9; padding: 7px; text-align: right; color: green;">{ot_total:,.2f}</td>
