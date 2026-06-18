@@ -25,7 +25,7 @@ def calculate_salary_breakdown(base_salary, absent_days, fine_amount, category, 
 
 def generate_pdf_bytes(employee_data, full_month, absent_days, fine_amount, present_days, pdf_buf):
     """
-    ⚙️ Fixed PDF Generator: A5 Size, Proper Logo Aspect, Right Aligned Signature
+    ⚙️ Updated PDF Generator: Dynamic Logo Scale, No Company Text, Tight Signature with Seal
     """
     eid, name, designation, category, department, final_payable = employee_data
     
@@ -33,35 +33,34 @@ def generate_pdf_bytes(employee_data, full_month, absent_days, fine_amount, pres
     current_dir = os.path.dirname(os.path.abspath(__file__))
     logo_path = os.path.join(current_dir, "logo.png")
     sig_path = os.path.join(current_dir, "signature.png")
+    seal_path = os.path.join(current_dir, "seal.png")  # Seal file path definition
     
-    # 📄 SimpleDocTemplate a pagesize=A5 ebong A5 er sathe khap khay emon margins (25) set kora holo
-    doc = SimpleDocTemplate(pdf_buf, pagesize=A5, rightMargin=25, leftMargin=25, topMargin=20, bottomMargin=20)
+    # 📄 SimpleDocTemplate A5 size ebong layout safe margin (25)
+    doc = SimpleDocTemplate(pdf_buf, pagesize=A5, rightMargin=25, leftMargin=25, topMargin=15, bottomMargin=15)
     story = []
     
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=15, leading=18, textColor=colors.HexColor('#1F4E78'), alignment=1)
-    sub_style = ParagraphStyle('Sub', parent=styles['Normal'], fontSize=9, leading=11, alignment=1, textColor=colors.HexColor('#555555'))
+    sub_style = ParagraphStyle('Sub', parent=styles['Normal'], fontSize=10, leading=12, alignment=1, textColor=colors.HexColor('#1F4E78'))
     body_style = ParagraphStyle('Body', parent=styles['Normal'], fontSize=8.5, leading=12)
     bold_style = ParagraphStyle('BoldBody', parent=body_style, fontName='Helvetica-Bold')
     right_bold_style = ParagraphStyle('RightBold', parent=bold_style, alignment=2)
 
-    # 🏢 1. Logo Section (Chepta hoba na, aspect ratio maintain hobe)
+    # 🏢 1. Logo Section (Boro ebong un-stretched/un-squeezed proper aspect ratio setup)
     if os.path.exists(logo_path):
         try:
-            # Logo chepta rodh korte width=110 ebong properly scaling height=40 kora holo
-            logo_img = Image(logo_path, width=110, height=40)
+            # Logo boro korte width=180 ebong width onujayi safe proportional height=55 set kora holo
+            logo_img = Image(logo_path, width=180, height=55)
             logo_img.hAlign = 'CENTER'
             story.append(logo_img)
             story.append(Spacer(1, 4))
         except Exception:
             pass
 
-    # Company Header info
-    story.append(Paragraph("<b>RECON LABORATORIES LTD.</b>", title_style))
-    story.append(Paragraph(f"Monthly Salary Pay Slip — {full_month}", sub_style))
-    story.append(Spacer(1, 12))
+    # Header text theke company name bad deya holo, shudhu Period ta asbe
+    story.append(Paragraph(f"<b>Monthly Salary Pay Slip — {full_month}</b>", sub_style))
+    story.append(Spacer(1, 15))
     
-    # 👥 2. Employee Info Table (A5 wide optimization - usable width approx 370)
+    # 👥 2. Employee Info Table (A5 wide optimization)
     info_data = [
         [Paragraph(f"<b>Employee ID:</b> {eid}", body_style), Paragraph(f"<b>Department:</b> {department}", body_style)],
         [Paragraph(f"<b>Name:</b> {name}", body_style), Paragraph(f"<b>Category:</b> {category}", body_style)],
@@ -94,37 +93,63 @@ def generate_pdf_bytes(employee_data, full_month, absent_days, fine_amount, pres
         ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#F2F4F7')),
     ]))
     story.append(t_breakdown)
-    story.append(Spacer(1, 25))
+    story.append(Spacer(1, 30))
     
-    # ✍️ 4. Signature Section (Right Aligned structure for A5 Layout)
+    # ✍️ 4. Signature & Seal Section (Daan dike nikhut alignment ebong pashapashi thakar setup)
     sig_text = Paragraph("_______________________<br/><b>Authorized Signature</b>", body_style)
     
-    # Signature box alignment right side a push korar jonno left side a khali space maintain kora holo
-    if os.path.exists(sig_path):
-        try:
-            sig_img = Image(sig_path, width=85, height=30)
-            sig_img.hAlign = 'RIGHT'
-            # Left side high width black column wrapper data structure
-            sig_data = [
-                ["", sig_img],
-                ["", sig_text]
-            ]
-            t_sig = Table(sig_data, colWidths=[230, 140])
-            t_sig.setStyle(TableStyle([
-                ('ALIGN', (1,0), (1,-1), 'RIGHT'),
-                ('VALIGN', (0,0), (-1,-1), 'BOTTOM'),
-                ('BOTTOMPADDING', (0,0), (-1,-1), 2)
-            ]))
-            story.append(t_sig)
-        except Exception:
-            # Falling safety if image rendering fails
-            t_sig_fallback = Table([["", sig_text]], colWidths=[230, 140])
-            t_sig_fallback.setStyle(TableStyle([('ALIGN', (1,0), (1,-1), 'RIGHT')]))
-            story.append(t_sig_fallback)
+    # Signature row images processing loop
+    sig_elements = []
+    
+    # Custom tight inner table to hold signature and seal side-by-side or closely aligned
+    inner_sig_data = []
+    
+    # Seal and Signature graphic processing inside right panel
+    has_sig = os.path.exists(sig_path)
+    has_seal = os.path.exists(seal_path)
+    
+    # Render box parameters based on availability
+    if has_sig or has_seal:
+        row_imgs = []
+        if has_seal:
+            try:
+                seal_img = Image(seal_path, width=45, height=45)
+                row_imgs.append(seal_img)
+            except Exception: pass
+        if has_sig:
+            try:
+                sig_img = Image(sig_path, width=80, height=30)
+                row_imgs.append(sig_img)
+            except Exception: pass
+            
+        # Puts images in a direct grid line row if both exist, otherwise simple element
+        if len(row_imgs) == 2:
+            inner_sig_data.append([row_imgs[0], row_imgs[1]])
+        elif len(row_imgs) == 1:
+            inner_sig_data.append(["", row_imgs[0]])
+        else:
+            inner_sig_data.append(["", ""])
     else:
-        t_sig_fallback = Table([["", sig_text]], colWidths=[230, 140])
-        t_sig_fallback.setStyle(TableStyle([('ALIGN', (1,0), (1,-1), 'RIGHT')]))
-        story.append(t_sig_fallback)
+        inner_sig_data.append(["", ""])
+        
+    inner_sig_data.append(["", sig_text]) # Bottom text insertion
+    
+    # Parent block wrapper table to strictly force layout on the RIGHT SIDE (colWidths customized to avoid wide gaps)
+    t_inner = Table(inner_sig_data, colWidths=[65, 110])
+    t_inner.setStyle(TableStyle([
+        ('ALIGN', (0,0), (-1,-1), 'RIGHT'),
+        ('VALIGN', (0,0), (-1,-1), 'BOTTOM'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1)
+    ]))
+
+    # Main structure placement grid: Left 195 units blank, Right 175 units takes the inner signature module
+    t_final_sig_block = Table([["", t_inner]], colWidths=[195, 175])
+    t_final_sig_block.setStyle(TableStyle([
+        ('ALIGN', (1,0), (1,0), 'RIGHT'),
+        ('VALIGN', (0,0), (-1,-1), 'BOTTOM')
+    ]))
+    
+    story.append(t_final_sig_block)
         
     # Build A5 document PDF stream
     doc.build(story)
