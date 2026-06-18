@@ -4,7 +4,7 @@ from datetime import datetime
 import calendar
 from io import BytesIO
 import pandas as pd
-import re  # ID format check korar jonno regex
+import re  # ID format check
 from calculations import calculate_salary_breakdown, generate_pdf_bytes
 
 st.set_page_config(page_title="RECON Payroll System", layout="wide", page_icon="💼")
@@ -154,11 +154,13 @@ with col2:
         
         saved_db_tracker = {r[1]: {"present": r[2], "absent": r[3], "fine": r[4], "ot_hrs": r[5], "ot_rate": r[6], "bonus": r[7], "advance": r[8]} for r in db_records}
 
+        # --- 📊 FINANCIAL DASHBOARD SUMMARY LOOP FIXED ---
         total_payout = 0.0
         for r in rows:
             eid, _, _, cat, _, base_sal = r
             rec = saved_db_tracker.get(eid, {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
             
+            # 💡 Sothik bhabe calculate_salary_breakdown call kore and overtime, bonus add kora hocche
             _, _, _, _, _, net_p, _ = calculate_salary_breakdown(base_sal, rec['absent'], rec['fine'], cat, rec['present'], rec['advance'])
             net_final = net_p + (rec['ot_hrs'] * rec['ot_rate']) + rec['bonus']
             total_payout += net_final
