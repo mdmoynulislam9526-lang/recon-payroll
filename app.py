@@ -44,12 +44,19 @@ if os.path.exists(local_logo_path):
     with open(local_logo_path, "rb") as img_file:
         logo_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- LIVE REPO SEAL & SIGNATURE LOADING ---
+# --- LIVE REPO SIGNATURE LOADING ---
 sig_base64_str = ""
 local_sig_path = os.path.join(current_dir, "signature.png")
 if os.path.exists(local_sig_path):
     with open(local_sig_path, "rb") as img_file:
         sig_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
+
+# --- LIVE REPO SEAL LOADING ---
+seal_base64_str = ""
+local_seal_path = os.path.join(current_dir, "seal.png")
+if os.path.exists(local_seal_path):
+    with open(local_seal_path, "rb") as img_file:
+        seal_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
 
 # --- MAIN TITLE ---
 st.title("💼 RECON LABORATORIES LTD - Advanced Payroll Management System")
@@ -227,10 +234,17 @@ with col2:
                     
                     # সিগনেচার ও সিলের ইমেজ কন্ডিশনাল রেন্ডারিং এবং ওভারল্যাপিং স্টাইল
                     sig_html_element = ""
+                    
+                    # প্রথমে সিলটি নিচে ব্যাকগ্রাউন্ড হিসেবে বসবে
+                    if seal_base64_str:
+                        sig_html_element += f"<img src='data:image/png;base64,{seal_base64_str}' style='max-height: 75px; width: auto; display: block; margin: 0 auto -45px auto; z-index: 8; position: relative; opacity: 0.85;' alt='Seal'>"
+                    
+                    # সিগনেচারটি সিলের ওপরে ভাসবে
                     if sig_base64_str:
-                        sig_html_element = f"<img src='data:image/png;base64,{sig_base64_str}' style='max-height: 85px; width: auto; display: block; margin: 0 auto -28px auto; z-index: 10; position: relative;' alt='Signature and Seal'>"
-                    else:
-                        sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[signature.png Not Found in Repo]</div>"
+                        sig_html_element += f"<img src='data:image/png;base64,{sig_base64_str}' style='max-height: 60px; width: auto; display: block; margin: 0 auto -25px auto; z-index: 12; position: relative;' alt='Signature'>"
+                    
+                    if not sig_base64_str and not seal_base64_str:
+                        sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[Images Not Found]</div>"
 
                     payslip_preview_html = f"""
                     <div style="font-family: 'Arial', sans-serif; padding: 25px; background: white; color: black; border: 1px solid #d9d9d9; border-radius: 8px; max-width: 650px; margin: 15px auto; box-sizing: border-box;">
@@ -307,7 +321,7 @@ with col2:
                             </tbody>
                         </table>
                         
-                        <div style="margin-top: 55px; display: flex; justify-content: flex-end;">
+                        <div style="margin-top: 60px; display: flex; justify-content: flex-end;">
                             <div style="text-align: center; width: 180px; position: relative;">
                                 {sig_html_element}
                                 <div style="border-top: 1px solid #000; padding-top: 5px; font-size: 11px; font-weight: bold; color: #333; position: relative; z-index: 5;">Authorized Signature</div>
