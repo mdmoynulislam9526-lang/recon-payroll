@@ -44,13 +44,20 @@ if os.path.exists(local_logo_path):
     with open(local_logo_path, "rb") as img_file:
         logo_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
 
+# --- LIVE REPO SEAL & SIGNATURE LOADING ---
+sig_base64_str = ""
+local_sig_path = os.path.join(current_dir, "signature.png")
+if os.path.exists(local_sig_path):
+    with open(local_sig_path, "rb") as img_file:
+        sig_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
+
 # --- MAIN TITLE ---
 st.title("💼 RECON LABORATORIES LTD - Advanced Payroll Management System")
 st.markdown("---")
 
 col1, col2 = st.columns([1, 2.3])
 
-# --- LEFT SIDE: ADD EMPLOYEE & UPLOAD SEAL-SIGNATURE ---
+# --- LEFT SIDE: ADD EMPLOYEE ---
 with col1:
     st.header("➕ Add New Person")
     
@@ -97,20 +104,6 @@ with col1:
                     st.error(f"⚠️ Warning: Employee ID '{input_id}' already exists!")
                 except ValueError: 
                     st.error("Salary must be a number!")
-                    
-    st.markdown("---")
-    st.header("🔏 Upload Seal & Signature")
-    uploaded_sig = st.file_uploader("Upload combined Seal + Signature Image", type=["png", "jpg", "jpeg"])
-    
-    sig_base64_str = ""
-    # প্রথমে আপলোড করা ফাইল চেক করবে, না থাকলে লোকাল ফাইল খুঁজবে
-    if uploaded_sig is not None:
-        sig_base64_str = base64.b64encode(uploaded_sig.read()).decode('utf-8')
-    else:
-        local_sig_path = os.path.join(current_dir, "signature.png")
-        if os.path.exists(local_sig_path):
-            with open(local_sig_path, "rb") as img_file:
-                sig_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
 
 # --- REUSABLE FUNCTION FOR EDIT/DELETE ---
 def render_inline_management(r, prefix=""):
@@ -237,7 +230,7 @@ with col2:
                     if sig_base64_str:
                         sig_html_element = f"<img src='data:image/png;base64,{sig_base64_str}' style='max-height: 85px; width: auto; display: block; margin: 0 auto -28px auto; z-index: 10; position: relative;' alt='Signature and Seal'>"
                     else:
-                        sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[No Seal/Sig Uploaded]</div>"
+                        sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[signature.png Not Found in Repo]</div>"
 
                     payslip_preview_html = f"""
                     <div style="font-family: 'Arial', sans-serif; padding: 25px; background: white; color: black; border: 1px solid #d9d9d9; border-radius: 8px; max-width: 650px; margin: 15px auto; box-sizing: border-box;">
