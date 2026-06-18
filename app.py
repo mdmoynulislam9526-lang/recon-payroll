@@ -240,20 +240,20 @@ with col2:
                     if not sig_base64_str and not seal_base64_str:
                         sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[Images Not Found]</div>"
 
-                    # --- PAYSLIP PREVIEW: FIXED COMPACT SYSTEM (NO GAPS/TEXT GLITCH) ---
-                    logo_img_tag = f"<img src='data:image/png;base64,{logo_base64_str}' style='max-height: 70px; width: auto; object-fit: contain; display: block; margin: 0;'>" if logo_base64_str else ""
+                    # --- PAYSLIP PREVIEW: NATIVE HTML SYSTEM ---
+                    logo_img_tag = f"<img src='data:image/png;base64,{logo_base64_str}' style='max-height: 75px; width: auto; object-fit: contain; display: block; margin: 0;'>" if logo_base64_str else ""
                     
                     payslip_preview_html = f"""
                     <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; background: white; color: black; border: 1px solid #e0e0e0; border-radius: 12px; max-width: 650px; margin: 20px auto; box-sizing: border-box; box-shadow: 0 4px 20px rgba(0,0,0,0.07);">
                         
-                        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 12px; border-bottom: 2.5px solid #1F4E78; padding-bottom: 12px;">
-                            <div style="flex: 0 0 auto; padding-right: 15px;">
+                        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px; border-bottom: 2.5px solid #1F4E78; padding-bottom: 12px;">
+                            <div style="flex: 0 0 auto; padding-right: 20px;">
                                 {logo_img_tag}
                             </div>
-                            <div style="flex: 1 1 auto; text-align: center; padding-right: 40px;">
-                                <h2 style="margin: 0; font-size: 20px; color: #000; font-weight: bold; font-family: 'Times New Roman', Times, serif; letter-spacing: 0.5px;">RECON LABORATORIES LTD</h2>
+                            <div style="flex: 1 1 auto; text-align: center; padding-right: 30px;">
+                                <h2 style="margin: 0; font-size: 21px; color: #000; font-weight: bold; font-family: 'Times New Roman', Times, serif; letter-spacing: 0.5px;">RECON LABORATORIES LTD</h2>
                                 <p style="margin: 3px 0; font-size: 11px; color: #333; font-weight: bold;">Real Edify Certified Organization</p>
-                                <p style="margin: 1px 0; font-size: 10.5px; color: #444;">Address: Bscic, Shilpo Nagar, Brahmanbaria</p>
+                                <p style="margin: 1px 0; font-size: 10.5px; color: #444;">Address: Bscic, Shilpo Nagori, Brahmanbaria</p>
                                 <p style="margin: 1px 0; font-size: 10.5px; color: #444; font-weight: 500;">Mobile: 01407087701 / 01407087717 / 01710454861</p>
                             </div>
                         </div>
@@ -317,7 +317,7 @@ with col2:
                                     <td style="padding: 8px; text-align: right; border-bottom: 1px dashed #f0f0f0; color: green;">{total_ot:,.2f}</td>
                                     <td style="padding: 8px; border-bottom: 1px dashed #f0f0f0; padding-left: 15px;"></td>
                                     <td style="padding: 8px; text-align: right; border-bottom: 1px dashed #f0f0f0;"></td>
-                                end_row
+                                </tr>
                                 <tr>
                                     <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; color: green;">Bonus</td>
                                     <td style="padding: 8px; text-align: right; border-bottom: 1px solid #e0e0e0; color: green;">{rec['bonus']:,.2f}</td>
@@ -397,14 +397,14 @@ with col2:
             print_html = f"""
             <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 25px; background: white; color: black; border-radius: 8px;">
                 
-                <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 12px; border-bottom: 3.5px solid #1F4E78; padding-bottom: 12px;">
+                <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px; border-bottom: 3.5px solid #1F4E78; padding-bottom: 12px;">
                     <div style="flex: 0 0 auto; padding-right: 20px;">
                         {"<img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 75px; width: auto; object-fit: contain;'>" if logo_base64_str else ""}
                     </div>
-                    <div style="flex: 1 1 auto; text-align: center; padding-right: 50px;">
+                    <div style="flex: 1 1 auto; text-align: center; padding-right: 40px;">
                         <h2 style="margin: 0; font-size: 22px; color: #000; font-weight: bold; font-family: 'Times New Roman', Times, serif;">RECON LABORATORIES LTD</h2>
                         <p style="margin: 3px 0; font-size: 11.5px; color: #333; font-weight: bold;">Real Edify Certified Organization</p>
-                        <p style="margin: 1px 0; font-size: 11px; color: #444;">Address: Bscic, Shilpo Nagar, Brahmanbaria</p>
+                        <p style="margin: 1px 0; font-size: 11px; color: #444;">Address: Bscic, Shilpo Nagori, Brahmanbaria</p>
                         <p style="margin: 1px 0; font-size: 11px; color: #444; font-weight: 500;">Mobile: 01407087701 / 01407087717 / 01710454861</p>
                         
                         <p style="margin: 10px 0 4px 0 !important; font-size: 14px !important; color: #1F4E78 !important; font-weight: bold !important; text-transform: uppercase !important; letter-spacing: 0.8px !important;">Employee Monthly Payroll Statement Sheet</p>
