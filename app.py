@@ -44,6 +44,13 @@ if os.path.exists(local_logo_path):
     with open(local_logo_path, "rb") as img_file:
         logo_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
 
+# --- SIGNATURE & SEAL BASE64 CONVERSION ---
+sig_base64_str = ""
+local_sig_path = os.path.join(current_dir, "signature.png")
+if os.path.exists(local_sig_path):
+    with open(local_sig_path, "rb") as img_file:
+        sig_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
+
 # --- MAIN TITLE ---
 st.title("💼 RECON LABORATORIES LTD - Advanced Payroll Management System")
 st.markdown("---")
@@ -218,6 +225,13 @@ with col2:
                     total_ot = rec['ot_hrs'] * rec['ot_rate']
                     net_final = net_p + total_ot + rec['bonus']
                     
+                    # সিগনেচার ও সিলের ইমেজ কন্ডিশনাল রেন্ডারিং
+                    sig_html_element = ""
+                    if sig_base64_str:
+                        sig_html_element = f"<img src='data:image/png;base64,{sig_base64_str}' style='max-height: 55px; width: auto; display: block; margin: 0 auto -12px auto; z-index: 10; position: relative;' alt='Signature and Seal'>"
+                    else:
+                        sig_html_element = "<div style='height: 43px;'></div>"
+
                     payslip_preview_html = f"""
                     <div style="font-family: 'Arial', sans-serif; padding: 25px; background: white; color: black; border: 1px solid #d9d9d9; border-radius: 8px; max-width: 650px; margin: 15px auto; box-sizing: border-box;">
                         <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 12px; margin-bottom: 15px;">
@@ -293,12 +307,11 @@ with col2:
                             </tbody>
                         </table>
                         
-                        <div style="margin-top: 50px; display: flex; justify-content: flex-end; align-items: flex-end; gap: 40px;">
-                            <div style="text-align: center;">
-                                <div style="width: 65px; height: 65px; border: 1px dashed #aaa; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 9px; color: #888; margin: 0 auto 5px auto; background-color: #fafafa;">Official Seal</div>
-                            </div>
-                            <div style="text-align: center; width: 160px;">
-                                <div style="border-top: 1px solid #000; padding-top: 6px; font-size: 11px; font-weight: bold; color: #333;">Authorized Signature</div>
+                        <!-- রাইট এলাইনড ও ওভারল্যাপড সিগনেচার ও সিল প্যানেল -->
+                        <div style="margin-top: 45px; display: flex; justify-content: flex-end;">
+                            <div style="text-align: center; width: 180px; position: relative;">
+                                {sig_html_element}
+                                <div style="border-top: 1px solid #000; padding-top: 5px; font-size: 11px; font-weight: bold; color: #333; position: relative; z-index: 5;">Authorized Signature</div>
                             </div>
                         </div>
                     </div>
