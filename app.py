@@ -200,6 +200,7 @@ with col2:
                 search_results = [r for r in rows if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()]
                 for emp in search_results: render_inline_management(emp, prefix="search_tab")
 
+        # --- TAB 1: INDIVIDUAL PAY SLIP (UPDATED PREVIEW) ---
         with tab1:
             pay_search = st.text_input("Enter Employee ID or Name for Pay Slip", key="pay_slip_search_input")
             if pay_search:
@@ -217,7 +218,90 @@ with col2:
                     total_ot = rec['ot_hrs'] * rec['ot_rate']
                     net_final = net_p + total_ot + rec['bonus']
                     
-                    st.markdown(f"#### **Net Payable Salary:** Tk {net_final:,.2f}")
+                    # লাইভ ক্লিয়ার এইচটিএমএল প্রিভিউ প্যানেল (ম্যাচিং উইথ মেইন শীট হেডার)
+                    payslip_preview_html = f"""
+                    <div style="font-family: 'Arial', sans-serif; padding: 25px; background: white; color: black; border: 1px solid #d9d9d9; border-radius: 8px; max-width: 650px; margin: 15px auto;">
+                        <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 12px; margin-bottom: 15px;">
+                            {"<div style='margin-bottom: 10px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 65px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
+                            <p style="margin: 5px 0 0 0; font-size: 13px; color: #1F4E78; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Employee Pay Slip</p>
+                            <span style="display: inline-block; margin-top: 4px; padding: 2px 10px; background: #E2EFDA; color: #375623; border-radius: 15px; font-size: 11px; font-weight: bold;">{full_month}</span>
+                        </div>
+                        <table style="width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 15px;">
+                            <tr>
+                                <td style="padding: 4px 0; font-weight: bold; color: #555; width: 30%;">Employee ID:</td>
+                                <td style="padding: 4px 0; font-weight: bold; color: #000;">{selected_emp[0]}</td>
+                                <td style="padding: 4px 0; font-weight: bold; color: #555; width: 25%;">Department:</td>
+                                <td style="padding: 4px 0; color: #000;">{selected_emp[4]}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 0; font-weight: bold; color: #555;">Name:</td>
+                                <td style="padding: 4px 0; font-weight: bold; color: #1F4E78;">{selected_emp[1]}</td>
+                                <td style="padding: 4px 0; font-weight: bold; color: #555;">Designation:</td>
+                                <td style="padding: 4px 0; color: #000;">{selected_emp[2]}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 0; font-weight: bold; color: #555;">Category:</td>
+                                <td style="padding: 4px 0; color: #000;">{selected_emp[3]}</td>
+                                <td style="padding: 4px 0; font-weight: bold; color: #555;">Attendance:</td>
+                                <td style="padding: 4px 0; font-weight: bold; color: #2F5597;">{rec['present']}P / {rec['absent']}A</td>
+                            </tr>
+                        </table>
+                        
+                        <table style="width: 100%; font-size: 12px; border-collapse: collapse; margin-bottom: 20px;">
+                            <thead>
+                                <tr style="background-color: #F2F4F7; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd;">
+                                    <th style="padding: 6px; text-align: left; color: #1F4E78;">Earnings</th>
+                                    <th style="padding: 6px; text-align: right; color: #1F4E78; width: 25%;">Amount (Tk)</th>
+                                    <th style="padding: 6px; text-align: left; color: #7F2020; padding-left: 15px;">Deductions</th>
+                                    <th style="padding: 6px; text-align: right; color: #7F2020; width: 25%;">Amount (Tk)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="padding: 6px; border-bottom: 1px dashed #eee;">Base Pay</td>
+                                    <td style="padding: 6px; text-align: right; border-bottom: 1px dashed #eee;">{gross:,.2f}</td>
+                                    <td style="padding: 6px; border-bottom: 1px dashed #eee; padding-left: 15px; color: #c00;">Absent Cut</td>
+                                    <td style="padding: 6px; text-align: right; border-bottom: 1px dashed #eee; color: #c00;">{absent_cut:,.2f}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 6px; border-bottom: 1px dashed #eee; color: #555;">House Rent</td>
+                                    <td style="padding: 6px; text-align: right; border-bottom: 1px dashed #eee; color: #555;">{house_rent:,.2f}</td>
+                                    <td style="padding: 6px; border-bottom: 1px dashed #eee; padding-left: 15px; color: #c00;">Fine / Penalty</td>
+                                    <td style="padding: 6px; text-align: right; border-bottom: 1px dashed #eee; color: #c00;">{rec['fine']:,.2f}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 6px; border-bottom: 1px dashed #eee; color: #555;">Medical</td>
+                                    <td style="padding: 6px; text-align: right; border-bottom: 1px dashed #eee; color: #555;">{medical:,.2f}</td>
+                                    <td style="padding: 6px; border-bottom: 1px dashed #eee; padding-left: 15px; color: #c00;">Advance Cut</td>
+                                    <td style="padding: 6px; text-align: right; border-bottom: 1px dashed #eee; color: #c00;">{adv_paid:,.2f}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 6px; border-bottom: 1px dashed #eee; color: green;">Overtime ({rec['ot_hrs']} hrs)</td>
+                                    <td style="padding: 6px; text-align: right; border-bottom: 1px dashed #eee; color: green;">{total_ot:,.2f}</td>
+                                    <td style="padding: 6px; border-bottom: 1px dashed #eee; padding-left: 15px;"></td>
+                                    <td style="padding: 6px; text-align: right; border-bottom: 1px dashed #eee;"></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 6px; border-bottom: 1px solid #ddd; color: green;">Bonus</td>
+                                    <td style="padding: 6px; text-align: right; border-bottom: 1px solid #ddd; color: green;">{rec['bonus']:,.2f}</td>
+                                    <td style="padding: 6px; border-bottom: 1px solid #ddd; padding-left: 15px;"></td>
+                                    <td style="padding: 6px; text-align: right; border-bottom: 1px solid #ddd;"></td>
+                                </tr>
+                                <tr style="background-color: #F2F4F7; font-weight: bold;">
+                                    <td style="padding: 8px 6px; color: #1F4E78;">Net Payable Salary:</td>
+                                    <td style="padding: 8px 6px; text-align: right; color: #1F4E78; font-size: 13px;" colspan="3">Tk {net_final:,.2f}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div style="margin-top: 40px; display: flex; justify-content: space-between; font-size: 11px; color: #555;">
+                            <div style="border-top: 1px solid #888; width: 140px; text-align: center; padding-top: 5px;">Prepared By</div>
+                            <div style="border-top: 1px solid #888; width: 140px; text-align: center; padding-top: 5px;">Receiver Signature</div>
+                            <div style="border-top: 1px solid #888; width: 140px; text-align: center; padding-top: 5px;">Authorized Approval</div>
+                        </div>
+                    </div>
+                    """
+                    st.components.v1.html(payslip_preview_html, height=420, scrolling=True)
                     
                     pdf_emp_data = (
                         selected_emp[0], selected_emp[1], selected_emp[2], selected_emp[3], selected_emp[4],
@@ -272,7 +356,6 @@ with col2:
             st.markdown("---")
             st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
 
-            # শুধুমাত্র মূল ইমেজটি মাঝখানে সুন্দরভাবে দেখানোর ব্যবস্থা করা হয়েছে
             print_html = f"""
             <div style="font-family: 'Arial', sans-serif; padding: 20px; background: white; color: black; border-radius: 8px;">
                 <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 14px; margin-bottom: 18px;">
