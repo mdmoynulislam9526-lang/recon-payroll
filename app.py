@@ -240,13 +240,13 @@ with col2:
                     if not sig_base64_str and not seal_base64_str:
                         sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[Images Not Found]</div>"
 
-                    # --- PAYSLIP DESIGN (HEADER FIXED & CENTERED) ---
+                    # --- PAYSLIP DESIGN ---
                     payslip_preview_html = f"""
                     <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; background: white; color: black; border: 1px solid #e0e0e0; border-radius: 12px; max-width: 650px; margin: 20px auto; box-sizing: border-box; box-shadow: 0 4px 20px rgba(0,0,0,0.07);">
                         <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 15px; margin-bottom: 18px;">
-                            {"<div style='margin-bottom: 12px; text-align: center;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 70px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
-                            <p style="margin: 5px 0; font-size: 14px; color: #1F4E78; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; text-align: center; width: 100%;">Employee Pay Slip</p>
-                            <div style="text-align: center; width: 100%; margin-top: 6px;"><span style="display: inline-block; padding: 3px 12px; background: #E2EFDA; color: #375623; border-radius: 15px; font-size: 12px; font-weight: bold; text-align: center;">{full_month}</span></div>
+                            <img src='data:image/png;base64,{logo_base64_str}' style='max-height: 70px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'>
+                            <p style="margin: 5px 0; font-size: 16px; color: #1F4E78; font-weight: bold; text-transform: uppercase;">Employee Pay Slip</p>
+                            <span style="display: inline-block; padding: 3px 14px; background: #E2EFDA; color: #375623; border-radius: 15px; font-size: 12px; font-weight: bold;">{full_month}</span>
                         </div>
                         <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 20px;">
                             <tr>
@@ -261,14 +261,7 @@ with col2:
                                 <td style="padding: 6px 0; font-weight: bold; color: #666;">Designation:</td>
                                 <td style="padding: 6px 0; color: #000; font-weight: bold;">{selected_emp[2]}</td>
                             </tr>
-                            <tr>
-                                <td style="padding: 6px 0; font-weight: bold; color: #666;">Category:</td>
-                                <td style="padding: 6px 0; color: #000; font-weight: bold;">{selected_emp[3]}</td>
-                                <td style="padding: 6px 0; font-weight: bold; color: #666;">Attendance:</td>
-                                <td style="padding: 6px 0; font-weight: bold; color: #2F5597;">{rec['present']}P / {rec['absent']}A</td>
-                            </tr>
                         </table>
-                        
                         <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 25px;">
                             <thead>
                                 <tr style="background-color: #F8F9FA; border-top: 1px solid #e0e0e0; border-bottom: 1px solid #e0e0e0;">
@@ -303,19 +296,12 @@ with col2:
                                     <td style="padding: 8px; border-bottom: 1px dashed #f0f0f0; padding-left: 15px;"></td>
                                     <td style="padding: 8px; text-align: right; border-bottom: 1px dashed #f0f0f0;"></td>
                                 </tr>
-                                <tr>
-                                    <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; color: green;">Bonus</td>
-                                    <td style="padding: 8px; text-align: right; border-bottom: 1px solid #e0e0e0; color: green;">{rec['bonus']:,.2f}</td>
-                                    <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; padding-left: 15px;"></td>
-                                    <td style="padding: 8px; text-align: right; border-bottom: 1px solid #e0e0e0;"></td>
-                                </tr>
                                 <tr style="background-color: #F8F9FA; font-weight: bold;">
                                     <td style="padding: 10px 8px; color: #1F4E78; font-size: 14px;">Net Payable Salary:</td>
                                     <td style="padding: 10px 8px; text-align: right; color: #1F4E78; font-size: 14px;" colspan="3">Tk {net_final:,.2f}</td>
                                 </tr>
                             </tbody>
                         </table>
-                        
                         <div style="margin-top: 50px; display: flex; justify-content: flex-end;">
                             <div style="text-align: center; width: 180px; position: relative;">
                                 {sig_html_element}
@@ -382,7 +368,7 @@ with col2:
             print_html = f"""
             <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 25px; background: white; color: black; border-radius: 8px;">
                 <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 15px; margin-bottom: 20px;">
-                    {"<div style='margin-bottom: 12px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 75px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
+                    <img src='data:image/png;base64,{logo_base64_str}' style='max-height: 75px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'>
                     <p style="margin: 8px 0 4px 0 !important; font-size: 15px !important; color: #1F4E78 !important; font-weight: bold !important; text-transform: uppercase !important; letter-spacing: 0.8px !important;">Employee Monthly Payroll Statement Sheet</p>
                     <span style="display: inline-block; margin-top: 4px; padding: 4px 16px; background: #E2EFDA; color: #375623; border-radius: 20px; font-size: 13px; font-weight: bold;">
                         Statement Period: {full_month}
