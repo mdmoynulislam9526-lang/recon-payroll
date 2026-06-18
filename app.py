@@ -240,14 +240,22 @@ with col2:
                     if not sig_base64_str and not seal_base64_str:
                         sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[Images Not Found]</div>"
 
-                    # --- PAYSLIP DESIGN (HEADER FIXED & CENTERED) ---
+                    # --- PAYSLIP DESIGN FIXED WITH SIDE-BY-SIDE SIDEGRID ---
+                    logo_img_tag = f"<img src='data:image/png;base64,{logo_base64_str}' style='max-height: 55px; width: auto; object-fit: contain;' alt='RECON Logo'>" if logo_base64_str else ""
+                    
                     payslip_preview_html = f"""
                     <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; background: white; color: black; border: 1px solid #e0e0e0; border-radius: 12px; max-width: 650px; margin: 20px auto; box-sizing: border-box; box-shadow: 0 4px 20px rgba(0,0,0,0.07);">
-                        <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 15px; margin-bottom: 18px;">
-                            {"<div style='margin-bottom: 12px; text-align: center;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 70px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
-                            <p style="margin: 5px 0; font-size: 14px; color: #1F4E78; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; text-align: center; width: 100%;">Employee Pay Slip</p>
-                            <div style="text-align: center; width: 100%; margin-top: 6px;"><span style="display: inline-block; padding: 3px 12px; background: #E2EFDA; color: #375623; border-radius: 15px; font-size: 12px; font-weight: bold; text-align: center;">{full_month}</span></div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #1F4E78; padding-bottom: 12px; margin-bottom: 18px;">
+                            <div style="flex: 0 0 auto;">
+                                {logo_img_tag}
+                            </div>
+                            <div style="text-align: right; flex: 1 1 auto; padding-left: 15px;">
+                                <p style="margin: 0; font-size: 15px; color: #1F4E78; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Employee Pay Slip</p>
+                                <span style="display: inline-block; margin-top: 5px; padding: 2px 10px; background: #E2EFDA; color: #375623; border-radius: 12px; font-size: 11px; font-weight: bold;">{full_month}</span>
+                            </div>
                         </div>
+
                         <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 20px;">
                             <tr>
                                 <td style="padding: 6px 0; font-weight: bold; color: #666; width: 30%;">Employee ID:</td>
