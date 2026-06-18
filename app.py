@@ -272,13 +272,13 @@ with col2:
             st.markdown("---")
             st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
 
-            # লোগো সাইজ ও লেআউট নিখুঁতভাবে রি-ডিজাইন করা হয়েছে (max-height: 110px;)
+            # লোগো এবং টাইটেলের সাইজ নিখুঁত অনুপাতে ফিক্সড করা হয়েছে
             print_html = f"""
             <div style="font-family: 'Arial', sans-serif; padding: 20px; background: white; color: black; border-radius: 8px;">
-                <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 15px; margin-bottom: 20px;">
-                    {"<div style='margin-bottom: 12px;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-width: 450px; max-height: 110px; width: auto; height: auto; object-fit: contain;' alt='RECON Logo'></div>" if logo_base64_str else ""}
-                    <p style="margin: 8px 0 0 0; font-size: 16px; color: #1F4E78; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px;">Employee Monthly Payroll Statement Sheet</p>
-                    <span style="display: inline-block; margin-top: 8px; padding: 5px 20px; background: #E2EFDA; color: #375623; border-radius: 20px; font-size: 14px; font-weight: bold;">
+                <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 12px; margin-bottom: 20px;">
+                    {"<div style='margin-bottom: 8px;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-width: 320px; max-height: 80px; width: auto; height: auto; object-fit: contain;' alt='RECON Logo'></div>" if logo_base64_str else ""}
+                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #1F4E78; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Employee Monthly Payroll Statement Sheet</p>
+                    <span style="display: inline-block; margin-top: 6px; padding: 4px 15px; background: #E2EFDA; color: #375623; border-radius: 20px; font-size: 12.5px; font-weight: bold;">
                         Statement Period: {full_month}
                     </span>
                 </div>
