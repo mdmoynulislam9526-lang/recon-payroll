@@ -240,23 +240,25 @@ with col2:
                     if not sig_base64_str and not seal_base64_str:
                         sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[Images Not Found]</div>"
 
-                    # --- PAYSLIP PREVIEW: NATIVE HTML SYSTEM ---
-                    logo_img_tag = f"<img src='data:image/png;base64,{logo_base64_str}' style='max-height: 65px; width: auto; object-fit: contain; display: block; background: transparent; mix-blend-mode: multiply;'>" if logo_base64_str else ""
+                    # --- PAYSLIP PREVIEW: NATIVE HTML SYSTEM (FIXED BOUNDS) ---
+                    logo_img_tag = f"<img src='data:image/png;base64,{logo_base64_str}' style='height: 70px; width: auto; max-width: 100px; display: inline-block; vertical-align: middle; padding: 0; margin: 0;'>" if logo_base64_str else ""
                     
                     payslip_preview_html = f"""
                     <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 25px; background: white; color: black; border: 1px solid #e0e0e0; border-radius: 12px; max-width: 650px; margin: 15px auto; box-sizing: border-box; box-shadow: 0 4px 20px rgba(0,0,0,0.07);">
                         
-                        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px; border-bottom: 2.5px solid #1F4E78; padding-bottom: 12px; background: transparent;">
-                            <div style="flex: 0 0 auto; padding-right: 15px; background: transparent;">
-                                {logo_img_tag}
-                            </div>
-                            <div style="flex: 1 1 auto; text-align: center; padding-right: 25px;">
-                                <h2 style="margin: 0; font-size: 21px; color: #000; font-weight: bold; font-family: 'Times New Roman', Times, serif; letter-spacing: 0.5px;">RECON LABORATORIES LTD</h2>
-                                <p style="margin: 3px 0; font-size: 11px; color: #333; font-weight: bold;">Real Edify Certified Organization</p>
-                                <p style="margin: 1px 0; font-size: 10.5px; color: #444;">Address: Bscic, Shilpo Nagori, Brahmanbaria</p>
-                                <p style="margin: 1px 0; font-size: 10.5px; color: #444; font-weight: 500;">Mobile: 01407087701 / 01407087717 / 01710454861</p>
-                            </div>
-                        </div>
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; border-bottom: 2.5px solid #1F4E78; padding-bottom: 12px;">
+                            <tr>
+                                <td style="width: 85px; text-align: left; vertical-align: middle; padding: 0 10px 12px 0;">
+                                    {logo_img_tag}
+                                </td>
+                                <td style="text-align: center; vertical-align: middle; padding: 0 45px 12px 0;">
+                                    <h2 style="margin: 0; font-size: 21px; color: #000; font-weight: bold; font-family: 'Times New Roman', Times, serif; letter-spacing: 0.5px;">RECON LABORATORIES LTD</h2>
+                                    <p style="margin: 3px 0; font-size: 11px; color: #333; font-weight: bold;">Real Edify Certified Organization</p>
+                                    <p style="margin: 1px 0; font-size: 10.5px; color: #444;">Address: Bscic, Shilpo Nagori, Brahmanbaria</p>
+                                    <p style="margin: 1px 0; font-size: 10.5px; color: #444; font-weight: 500;">Mobile: 01407087701 / 01407087717 / 01710454861</p>
+                                </td>
+                            </tr>
+                        </table>
 
                         <div style="text-align: center; margin-bottom: 18px;">
                             <p style="margin: 0; font-size: 14px; color: #1F4E78; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px;">EMPLOYEE PAY SLIP</p>
@@ -397,22 +399,24 @@ with col2:
             print_html = f"""
             <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 25px; background: white; color: black; border-radius: 8px;">
                 
-                <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 15px; border-bottom: 3.5px solid #1F4E78; padding-bottom: 12px;">
-                    <div style="flex: 0 0 auto; padding-right: 20px;">
-                        {"<img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 70px; width: auto; object-fit: contain; mix-blend-mode: multiply;'>" if logo_base64_str else ""}
-                    </div>
-                    <div style="flex: 1 1 auto; text-align: center; padding-right: 35px;">
-                        <h2 style="margin: 0; font-size: 22px; color: #000; font-weight: bold; font-family: 'Times New Roman', Times, serif;">RECON LABORATORIES LTD</h2>
-                        <p style="margin: 3px 0; font-size: 11.5px; color: #333; font-weight: bold;">Real Edify Certified Organization</p>
-                        <p style="margin: 1px 0; font-size: 11px; color: #444;">Address: Bscic, Shilpo Nagori, Brahmanbaria</p>
-                        <p style="margin: 1px 0; font-size: 11px; color: #444; font-weight: 500;">Mobile: 01407087701 / 01407087717 / 01710454861</p>
-                        
-                        <p style="margin: 10px 0 4px 0 !important; font-size: 14px !important; color: #1F4E78 !important; font-weight: bold !important; text-transform: uppercase !important; letter-spacing: 0.8px !important;">Employee Monthly Payroll Statement Sheet</p>
-                        <span style="display: inline-block; margin-top: 4px; padding: 3px 18px; background: #E2EFDA; color: #375623; border-radius: 20px; font-size: 12px; font-weight: bold;">
-                            Statement Period: {full_month}
-                        </span>
-                    </div>
-                </div>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; border-bottom: 3.5px solid #1F4E78; padding-bottom: 12px;">
+                    <tr>
+                        <td style="width: 90px; text-align: left; vertical-align: middle; padding-bottom: 12px;">
+                            {"<img src='data:image/png;base64," + logo_base64_str + "' style='height: 70px; width: auto; max-width:100px;'>" if logo_base64_str else ""}
+                        </td>
+                        <td style="text-align: center; vertical-align: middle; padding: 0 50px 12px 0;">
+                            <h2 style="margin: 0; font-size: 22px; color: #000; font-weight: bold; font-family: 'Times New Roman', Times, serif;">RECON LABORATORIES LTD</h2>
+                            <p style="margin: 3px 0; font-size: 11.5px; color: #333; font-weight: bold;">Real Edify Certified Organization</p>
+                            <p style="margin: 1px 0; font-size: 11px; color: #444;">Address: Bscic, Shilpo Nagori, Brahmanbaria</p>
+                            <p style="margin: 1px 0; font-size: 11px; color: #444; font-weight: 500;">Mobile: 01407087701 / 01407087717 / 01710454861</p>
+                            
+                            <p style="margin: 10px 0 4px 0 !important; font-size: 14px !important; color: #1F4E78 !important; font-weight: bold !important; text-transform: uppercase !important; letter-spacing: 0.8px !important;">Employee Monthly Payroll Statement Sheet</p>
+                            <span style="display: inline-block; margin-top: 4px; padding: 3px 18px; background: #E2EFDA; color: #375623; border-radius: 20px; font-size: 12px; font-weight: bold;">
+                                Statement Period: {full_month}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
             """
 
             categories_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
