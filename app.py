@@ -272,13 +272,13 @@ with col2:
             st.markdown("---")
             st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
 
-            # লোগো এবং টাইটেলের সাইজ নিখুঁত অনুপাতে ফিক্সড করা হয়েছে
+            # লোগো এবং লেখার অনুপাত সুনির্দিষ্ট বক্সের মধ্যে লক করা হয়েছে
             print_html = f"""
             <div style="font-family: 'Arial', sans-serif; padding: 20px; background: white; color: black; border-radius: 8px;">
-                <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 12px; margin-bottom: 20px;">
-                    {"<div style='margin-bottom: 8px;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-width: 320px; max-height: 80px; width: auto; height: auto; object-fit: contain;' alt='RECON Logo'></div>" if logo_base64_str else ""}
-                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #1F4E78; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Employee Monthly Payroll Statement Sheet</p>
-                    <span style="display: inline-block; margin-top: 6px; padding: 4px 15px; background: #E2EFDA; color: #375623; border-radius: 20px; font-size: 12.5px; font-weight: bold;">
+                <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 12px; margin-bottom: 20px; max-width: 100%; box-sizing: border-box;">
+                    {"<div style='margin-bottom: 6px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-width: 260px; max-height: 75px; width: auto; height: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
+                    <p style="margin: 4px 0 0 0 !important; font-size: 13px !important; color: #1F4E78 !important; font-weight: bold !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; display: block !important;">Employee Monthly Payroll Statement Sheet</p>
+                    <span style="display: inline-block; margin-top: 8px; padding: 3px 12px; background: #E2EFDA; color: #375623; border-radius: 20px; font-size: 12px; font-weight: bold;">
                         Statement Period: {full_month}
                     </span>
                 </div>
