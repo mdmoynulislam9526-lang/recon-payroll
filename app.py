@@ -44,17 +44,7 @@ if os.path.exists(local_logo_path):
     with open(local_logo_path, "rb") as img_file:
         logo_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- MAIN HEADER WITH LOGO ---
-if logo_base64_str:
-    st.markdown(
-        f"""
-        <div style="text-align: center; margin-bottom: 20px;">
-            <img src="data:image/png;base64,{logo_base64_str}" style="width:250px; height:60px; object-fit:contain;">
-        </div>
-        """, 
-        unsafe_allow_html=True
-    )
-
+# --- MAIN TITLE (TOP LOGO REMOVED) ---
 st.title("💼 RECON LABORATORIES LTD - Advanced Payroll Management System")
 st.markdown("---")
 
@@ -173,14 +163,11 @@ with col2:
         db_records = conn.cursor().execute("SELECT * FROM monthly_attendance_records WHERE month_year=?", (full_month,)).fetchall()
         conn.close()
         
-        # ডাটাবেজ ট্র্যাকারের সঠিক ডিকশনারি ম্যাপিং ফিক্স
         saved_db_tracker = {str(r[1]): {"present": r[2], "absent": r[3], "fine": r[4], "ot_hrs": r[5], "ot_rate": r[6], "bonus": r[7], "advance": r[8]} for r in db_records}
 
-        # --- FINANCIAL DASHBOARD LOGIC FIX ---
         total_payout = 0.0
         for r in rows:
             eid, _, _, cat, _, base_sal = r
-            # ডাটাবেজে রেকর্ড না থাকলে ডিফল্ট ভ্যালু সেট হবে
             rec = saved_db_tracker.get(str(eid), {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
             
             _, _, _, _, _, net_p, _ = calculate_salary_breakdown(
@@ -285,11 +272,12 @@ with col2:
             st.markdown("---")
             st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
 
+            # এখানে লোগোর সাইজ বাড়ানো হয়েছে (width: 320px; height: 80px;)
             print_html = f"""
             <div style="font-family: 'Arial', sans-serif; padding: 15px; background: white; color: black; border-radius: 8px;">
                 <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 12px; margin-bottom: 15px;">
-                    {"<img src='data:image/png;base64," + logo_base64_str + "' style='width:200px; height:50px; object-fit:contain; margin-bottom:5px;' alt='Logo'>" if logo_base64_str else ""}
-                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #1F4E78; font-weight: bold; text-transform: uppercase;">Employee Monthly Payroll Statement Sheet</p>
+                    {"<img src='data:image/png;base64," + logo_base64_str + "' style='width:320px; height:80px; object-fit:contain; margin-bottom:8px;' alt='Logo'>" if logo_base64_str else ""}
+                    <p style="margin: 5px 0 0 0; font-size: 15px; color: #1F4E78; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Employee Monthly Payroll Statement Sheet</p>
                     <span style="display: inline-block; margin-top: 6px; padding: 4px 15px; background: #E2EFDA; color: #375623; border-radius: 20px; font-size: 13px; font-weight: bold;">
                         Statement Period: {full_month}
                     </span>
