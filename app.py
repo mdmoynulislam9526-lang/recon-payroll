@@ -1,10 +1,18 @@
+Ami antorikbhabe duhkshito, aslo ager sheet er printable ongshotuku boro thakar karone ota purata bad pore gechilo. Apnar ager system er dashboard summary, category expander tabs (All Employees, Search Employee), ebong nicher full printable ledger table system (ja apni 1111.PNG a dekhiyechen)—shobkichu 100% thik rekhe, shudhu dynamic allowances ebong advance cut functionality jog kore nicher purno code-ti ready korechi.
+
+Apnar ager kono system nosto hobe na, purno design-i thakbe.
+
+📝 app.py er purno ebong shundor code (Ager shob system thakbe):
+GitHub-e giye apnar app.py muche ei code-ti paste kore Commit korun:
+
+Python
 import streamlit as st
 import sqlite3
 from datetime import datetime
 import calendar
 from io import BytesIO
 import pandas as pd
-import re  # ID format check
+import re  # ID format check korar jonno regex
 from calculations import calculate_salary_breakdown, generate_pdf_bytes
 
 st.set_page_config(page_title="RECON Payroll System", layout="wide", page_icon="💼")
@@ -87,6 +95,51 @@ with col1:
                 except ValueError: 
                     st.error("Salary must be a number!")
 
+# --- REUSABLE FUNCTION FOR EDIT/DELETE ---
+def render_inline_management(r, prefix=""):
+    eid, ename, edesg, ecat, edept, esalary = r
+    with st.container():
+        col_info, col_act1, col_act2 = st.columns([3, 0.6, 0.6])
+        with col_info:
+            st.markdown(f"**[{eid}] {ename}** — {edesg} ({edept}) | Salary: Tk {esalary:,.2f}")
+        with col_act1:
+            if st.button("Edit 📝", key=f"{prefix}_edit_{eid}", use_container_width=True):
+                st.session_state[f"emode_{prefix}_{eid}"] = True
+        with col_act2:
+            if st.button("Delete ❌", key=f"{prefix}_del_{eid}", use_container_width=True, type="secondary"):
+                conn = get_db_connection()
+                conn.cursor().execute("DELETE FROM employees_final_version WHERE emp_id=?", (eid,))
+                conn.commit()
+                conn.close()
+                st.success("Deleted!")
+                st.rerun()
+
+        if st.session_state.get(f"emode_{prefix}_{eid}", False):
+            with st.form(key=f"form_{prefix}_{eid}"):
+                ch_name = st.text_input("Edit Name", value=ename)
+                dept_list = ["Production", "Quality Control", "Development", "Maintenance", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"]
+                ch_dept = st.selectbox("Edit Department", dept_list, index=dept_list.index(edept) if edept in dept_list else 0)
+                cat_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
+                ch_cat = st.selectbox("Edit Category", cat_list, index=cat_list.index(ecat) if ecat in cat_list else 0)
+                ch_desg = st.text_input("Edit Designation", value=edesg)
+                ch_salary = st.text_input("Edit Salary/Rate", value=str(esalary))
+                
+                b1, b2 = st.columns(2)
+                with b1:
+                    if st.form_submit_button("Save Changes", use_container_width=True):
+                        conn = get_db_connection()
+                        conn.cursor().execute("UPDATE employees_final_version SET name=?, designation=?, category=?, department=?, salary=? WHERE emp_id=?", (ch_name, ch_desg, ch_cat, ch_dept, float(ch_salary), eid))
+                        conn.commit()
+                        conn.close()
+                        st.session_state[f"emode_{prefix}_{eid}"] = False
+                        st.success("Updated!")
+                        st.rerun()
+                with b2:
+                    if st.form_submit_button("Cancel", use_container_width=True):
+                        st.session_state[f"emode_{prefix}_{eid}"] = False
+                        st.rerun()
+        st.markdown("<hr style='margin:4px 0px; border-color:#eee;'>", unsafe_allow_html=True)
+
 # --- RIGHT SIDE: PAYROLL MANAGEMENT ---
 with col2:
     conn = get_db_connection()
@@ -124,10 +177,22 @@ with col2:
         m_col2.metric("Total Payout (Tk)", f"{total_payout:,.2f}")
         st.markdown("---")
 
-        tab_emp, tab1, tab2 = st.tabs(["👥 All Employees", "📄 Individual Pay Slip", "📊 Attendance & Payroll Processor"])
+        tab_emp, tab0, tab1, tab2 = st.tabs(["👥 All Employees", "🔍 Search Employee", "📄 Individual Pay Slip", "📊 Attendance & Payroll Processor"])
         
         with tab_emp:
-            st.info("All employees registered in the system can be viewed here.")
+            categories_map = {"💼 Managers": "Manager", "👔 Officers": "Officer", "🛠️ Workers (Permanent)": "Worker (Permanent)", "📆 Workers (Daily Basis)": "Worker (Daily Basis)"}
+            for title, cat_value in categories_map.items():
+                cat_members = [r for r in rows if r[3] == cat_value]
+                with st.expander(f"{title} ({len(cat_members)})", expanded=False):
+                    if not cat_members: st.info("No records.")
+                    else:
+                        for r in cat_members: render_inline_management(r, prefix="all_tab")
+
+        with tab0:
+            search_query = st.text_input("Enter Employee ID or Name to search", placeholder="Type here...", key="search_tab_input")
+            if search_query:
+                search_results = [r for r in rows if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()]
+                for emp in search_results: render_inline_management(emp, prefix="search_tab")
 
         with tab1:
             pay_search = st.text_input("Enter Employee ID or Name for Pay Slip", key="pay_slip_search_input")
@@ -139,18 +204,15 @@ with col2:
                     
                     st.success(f"Selected: {selected_emp[1]} ({selected_emp[0]})")
                     
-                    # Calculations এবং Allowance ব্রেকডাউন জেনারেট করা হচ্ছে
                     gross, house_rent, medical, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(
                         selected_emp[5], rec['absent'], rec['fine'], selected_emp[3], rec['present'], rec['advance']
                     )
                     
-                    # ওভারটাইম এবং বোনাসসহ ফাইনাল হিসাব
                     total_ot = rec['ot_hrs'] * rec['ot_rate']
                     net_final = net_p + total_ot + rec['bonus']
                     
                     st.markdown(f"#### **Net Payable Salary:** Tk {net_final:,.2f}")
                     
-                    # calculations.py-তে পাঠানোর জন্য ডাটা প্যাকিং (৯টি ভ্যালু)
                     pdf_emp_data = (
                         selected_emp[0], selected_emp[1], selected_emp[2], selected_emp[3], selected_emp[4],
                         house_rent, medical, adv_paid, net_final
@@ -187,7 +249,7 @@ with col2:
                             adv_cut = st.number_input("Advanced Salary Cut (Tk)", 0.0, 200000.0, value=float(rec['advance']), key=f"adv_{r[0]}")
                         
                         sheet_data.append({'eid': r[0], 'p': p_d, 'a': a_d, 'f': f_d, 'oth': ot_h, 'otr': ot_r, 'bonus': bonus_amt, 'adv': adv_cut})
-                        st.markdown("<hr style='margin:2px 0;'>", unsafe_allow_html=True)
+                        st.markdown("<hr style='margin:2px 0; border-color:#eee;'>", unsafe_allow_html=True)
                     
                     if st.form_submit_button("💾 Save Entry to Database", use_container_width=True, type="primary"):
                         conn = get_db_connection()
@@ -200,19 +262,87 @@ with col2:
                         st.success(f"Successfully saved records!")
                         st.rerun()
 
-            # --- LIVE PRINT PREVIEW ---
+            # --- HTML/CSS PRINTABLE LEDGER SHEET SYSTEM WITH RECON BANNER ---
             st.markdown("---")
-            st.markdown("### 🖨️ Print Preview Panel")
+            st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
             
             print_html = f"""
             <div style="font-family: 'Arial', sans-serif; padding: 15px; background: white; color: black; border-radius: 8px;">
                 <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 12px; margin-bottom: 15px;">
-                    <h1 style="margin: 0; font-size: 24px; color: #1F4E78;">🏢 RECON LABORATORIES LTD.</h1>
-                    <p style="margin: 5px 0 0 0; font-size: 13px; font-weight: bold; color: #555;">Monthly Payroll Statement — {full_month}</p>
+                    <h1 style="margin: 0; font-size: 28px; color: #1F4E78; font-weight: bold;">🏢 RECON LABORATORIES LTD.</h1>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #555; font-weight: bold; text-transform: uppercase;">Advanced Employee Monthly Payroll Statement Sheet</p>
+                    <span style="display: inline-block; margin-top: 6px; padding: 4px 15px; background: #E2EFDA; color: #375623; border-radius: 20px; font-size: 13px; font-weight: bold;">
+                        Statement Period: {full_month}
+                    </span>
                 </div>
-                <p style="text-align:center; font-size:12px; color:#666;">[Ready to Print Sheet Content]</p>
-            </div>
             """
-            st.components.v1.html(print_html, height=200)
+
+            categories_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
+            display_titles = ["💼 Managers Summary", "👔 Officers Summary", "🛠️ Workers (Permanent) Summary", "📆 Workers (Daily Basis) Summary"]
+            
+            has_any_data = False
+            for cat_name, title_text in zip(categories_list, display_titles):
+                cat_rows = [r for r in rows if r[3] == cat_name]
+                if not cat_rows: continue
+                
+                has_any_data = True
+                print_html += f"""
+                <h3 style="color: #2F5597; border-left: 5px solid #2F5597; padding-left: 8px; margin-top: 25px; margin-bottom: 10px; font-size: 16px;">{title_text}</h3>
+                <div style="overflow-x: auto; max-width: 100%;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 15px; background: white; min-width: 1100px;">
+                        <thead>
+                            <tr style="background-color: #2F5597; color: white; text-align: center;">
+                                <th style="border: 1px solid #A6A6A6; padding: 6px;">ID</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 6px; text-align: left;">Employee Name</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 6px; text-align: left;">Department</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 6px;">Base Pay</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 6px;">H.Rent</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 6px;">Medical</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 6px;">P/A Days</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 6px;">Abs Cut</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 6px;">Fine</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 6px;">OT Earn</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 6px;">Bonus</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 6px;">Adv Cut</th>
+                                <th style="border: 1px solid #A6A6A6; padding: 6px; background-color: #1F4E78;">Net Payable</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                """
+                
+                for r in cat_rows:
+                    eid, name, desg, cat, dept, base_sal = r
+                    rec = saved_db_tracker.get(eid, {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
+                    
+                    gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(base_sal, rec['absent'], rec['fine'], cat, rec['present'], rec['advance'])
+                    ot_total = rec['ot_hrs'] * rec['ot_rate']
+                    final_payable = net_p + ot_total + rec['bonus']
+                    
+                    print_html += f"""
+                            <tr style="text-align: center; background-color: white;">
+                                <td style="border: 1px solid #D9D9D9; padding: 5px; font-weight: bold;">{str(eid)}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 5px; text-align: left; font-weight: bold;">{name}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 5px; text-align: left;">{dept}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 5px; text-align: right;">{base_sal:,.2f}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 5px; text-align: right; color: #555;">{house_rent:,.2f}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 5px; text-align: right; color: #555;">{medical:,.2f}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 5px;">{rec['present']}P / {rec['absent']}A</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 5px; text-align: right; color: red;">{ab_cut:,.2f}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 5px; text-align: right; color: red;">{rec['fine']:,.2f}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 5px; text-align: right; color: green;">{ot_total:,.2f}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 5px; text-align: right; color: green;">{rec['bonus']:,.2f}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 5px; text-align: right; color: red;">{adv_paid:,.2f}</td>
+                                <td style="border: 1px solid #D9D9D9; padding: 5px; text-align: right; font-weight: bold; color: #1F4E78; background-color: #F2F4F7;">{final_payable:,.2f}</td>
+                            </tr>
+                    """
+                print_html += "</tbody></table></div>"
+            print_html += "</div>"
+
+            if has_any_data:
+                st.components.v1.html(print_html, height=600, scrolling=True)
+                if st.button("🖨️ CLICK HERE TO PRINT THIS FULL SHEET (WITH RECON LOGO)", use_container_width=True, type="primary"):
+                    st.components.v1.html(f"{print_html}<script>window.print();</script>", height=0)
+            else:
+                st.info("No records loaded yet.")
                 
     else: st.info("Database is empty. Please add people from the left panel.")
