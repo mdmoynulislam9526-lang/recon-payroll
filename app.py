@@ -240,13 +240,13 @@ with col2:
                     if not sig_base64_str and not seal_base64_str:
                         sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[Images Not Found]</div>"
 
-                    # --- PAYSLIP DESIGN (HEADER FIXED & CENTERED) ---
+                    # --- PAYSLIP DESIGN WITH REQUESTED BOLD FIELDS ---
                     payslip_preview_html = f"""
                     <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; background: white; color: black; border: 1px solid #e0e0e0; border-radius: 12px; max-width: 650px; margin: 20px auto; box-sizing: border-box; box-shadow: 0 4px 20px rgba(0,0,0,0.07);">
                         <div style="text-align: center; border-bottom: 3px solid #1F4E78; padding-bottom: 15px; margin-bottom: 18px;">
-                            {"<div style='margin-bottom: 12px; text-align: center;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 70px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
-                            <p style="margin: 5px 0; font-size: 14px; color: #1F4E78; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px; text-align: center; width: 100%;">Employee Pay Slip</p>
-                            <div style="text-align: center; width: 100%; margin-top: 6px;"><span style="display: inline-block; padding: 3px 12px; background: #E2EFDA; color: #375623; border-radius: 15px; font-size: 12px; font-weight: bold; text-align: center;">{full_month}</span></div>
+                            {"<div style='margin-bottom: 12px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 70px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
+                            <p style="margin: 5px 0 0 0; font-size: 14px; color: #1F4E78; font-weight: bold; text-transform: uppercase; letter-spacing: 0.8px;">Employee Pay Slip</p>
+                            <span style="display: inline-block; margin-top: 6px; padding: 3px 12px; background: #E2EFDA; color: #375623; border-radius: 15px; font-size: 12px; font-weight: bold;">{full_month}</span>
                         </div>
                         <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 20px;">
                             <tr>
@@ -431,6 +431,7 @@ with col2:
                     ot_total = rec['ot_hrs'] * rec['ot_rate']
                     final_payable = net_p + ot_total + rec['bonus']
                     
+                    # প্রিন্ট শিটেও ৩টি তথ্যকে বোল্ড করা হয়েছে
                     print_html += f"""
                             <tr style="text-align: center; background-color: white;">
                                 <td style="border: 1px solid #D9D9D9; padding: 7px; font-weight: bold;">{str(eid)}</td>
