@@ -125,7 +125,6 @@ def render_inline_management(r, prefix=""):
         with col_act2:
             if st.button("Delete ❌", key=f"{prefix}_del_{eid}", use_container_width=True, type="secondary"):
                 conn = get_db_connection()
-                # ক্যাসকেড ডিলিট: কর্মচারী ডিলিট করলে তার অ্যাটেনডেন্স রেকর্ডও ডিলিট হবে
                 conn.cursor().execute("DELETE FROM employees_final_version WHERE emp_id=?", (eid,))
                 conn.cursor().execute("DELETE FROM monthly_attendance_records WHERE emp_id=?", (eid,))
                 conn.commit()
@@ -135,7 +134,6 @@ def render_inline_management(r, prefix=""):
 
         if st.session_state.get(f"emode_{prefix}_{eid}", False):
             with st.form(key=f"form_{prefix}_{eid}"):
-                # নতুন ফিচার: আইডি পরিবর্তন করার ইনপুট ফিল্ড
                 ch_id = st.text_input("Edit Employee ID", value=eid).strip()
                 ch_name = st.text_input("Edit Name", value=ename)
                 dept_list = ["Production", "Quality Control", "Development", "Maintenance", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"]
@@ -155,23 +153,17 @@ def render_inline_management(r, prefix=""):
                                 conn = get_db_connection()
                                 cursor = conn.cursor()
                                 
-                                # ১. যদি আইডি পরিবর্তন করা হয়
                                 if ch_id != eid:
-                                    # চেক করা হচ্ছে নতুন আইডিটি অন্য কারো আছে কিনা
                                     exists = cursor.execute("SELECT 1 FROM employees_final_version WHERE emp_id=?", (ch_id,)).fetchone()
                                     if exists:
                                         st.error(f"⚠️ Employee ID '{ch_id}' already exists!")
                                         conn.close()
                                         return
                                     
-                                    # প্রথমে নতুন আইডি দিয়ে একটি রো তৈরি করা (SQLite এ প্রাইমারি কি সরাসরি আপডেট করার নিরাপদ বিকল্প)
                                     cursor.execute("INSERT INTO employees_final_version VALUES (?, ?, ?, ?, ?, ?)", (ch_id, ch_name, ch_desg, ch_cat, ch_dept, float(ch_salary)))
-                                    # অ্যাটেনডেন্স রেকর্ডের আইডিগুলো নতুন আইডিতে শিফট করা
                                     cursor.execute("UPDATE monthly_attendance_records SET emp_id=? WHERE emp_id=?", (ch_id, eid))
-                                    # পুরোনো আইডির রো ডিলিট করে দেওয়া
                                     cursor.execute("DELETE FROM employees_final_version WHERE emp_id=?", (eid,))
                                 else:
-                                    # ২. আইডি সেম থাকলে সাধারণ আপডেট
                                     cursor.execute("UPDATE employees_final_version SET name=?, designation=?, category=?, department=?, salary=? WHERE emp_id=?", (ch_name, ch_desg, ch_cat, ch_dept, float(ch_salary), eid))
                                 
                                 conn.commit()
@@ -196,7 +188,6 @@ with col2:
     if rows:
         months_list = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
         
-        # --- DYNAMIC YEAR SELECTION (LIFETIME FIX ENHANCED) ---
         c_col1, c_col2 = st.columns(2)
         with c_col1: select_m = st.selectbox("Select Month", months_list, index=int(datetime.now().strftime("%m")) - 1)
         
@@ -388,6 +379,7 @@ with col2:
                     generate_pdf_bytes(pdf_emp_data, full_month, rec['absent'], rec['fine'], rec['present'], pdf_buf)
                     st.download_button("📥 Download Pay Slip (PDF)", data=pdf_buf.getvalue(), file_name=f"PaySlip_{selected_emp[0]}_{select_m}.pdf", mime="application/pdf", use_container_width=True)
 
+        # --- TAB 2: ATTENDANCE & PROCESSOR WITH SECURITY CHECKBOX ---
         with tab2:
             view_cat = st.selectbox("Select Category to Process", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
             filtered_rows = [r for r in rows if r[3] == view_cat]
@@ -417,16 +409,22 @@ with col2:
                         sheet_data.append({'eid': r[0], 'p': p_d, 'a': a_d, 'f': f_d, 'oth': ot_h, 'otr': ot_r, 'bonus': bonus_amt, 'adv': adv_cut})
                         st.markdown("<hr style='margin:2px 0; border-color:#eee;'>", unsafe_allow_html=True)
                     
+                    st.markdown("#### 🔒 Data Saving Security Verification")
+                    confirm_save = st.checkbox(f"I intentionally want to save/overwrite data for **{full_month}**.")
+                    
                     if st.form_submit_button("💾 Save Entry to Database", use_container_width=True, type="primary"):
-                        conn = get_db_connection()
-                        for item in sheet_data:
-                            conn.cursor().execute("""
-                                INSERT OR REPLACE INTO monthly_attendance_records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            """, (full_month, item['eid'], item['p'], item['a'], item['f'], item['oth'], item['otr'], item['bonus'], item['adv']))
-                        conn.commit()
-                        conn.close()
-                        st.success(f"Successfully saved records!")
-                        st.rerun()
+                        if not confirm_save:
+                            st.error(f"❌ Action Denied! Please check the permission box above to confirm saving data for **{full_month}**.")
+                        else:
+                            conn = get_db_connection()
+                            for item in sheet_data:
+                                conn.cursor().execute("""
+                                    INSERT OR REPLACE INTO monthly_attendance_records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                """, (full_month, item['eid'], item['p'], item['a'], item['f'], item['oth'], item['otr'], item['bonus'], item['adv']))
+                            conn.commit()
+                            conn.close()
+                            st.success(f"✅ Successfully saved records for {full_month}!")
+                            st.rerun()
 
             st.markdown("---")
             st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
