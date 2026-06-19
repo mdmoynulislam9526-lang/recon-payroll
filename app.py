@@ -165,9 +165,18 @@ with col2:
     
     if rows:
         months_list = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+        
+        # --- DYNAMIC YEAR SELECTION (LIFETIME FIX) ---
         c_col1, c_col2 = st.columns(2)
         with c_col1: select_m = st.selectbox("Select Month", months_list, index=int(datetime.now().strftime("%m")) - 1)
-        with c_col2: select_y = st.selectbox("Select Year", [str(y) for y in range(2024, 2031)], index=2)
+        
+        current_year = datetime.now().year
+        available_years = [str(y) for y in range(2023, current_year + 11)] 
+        current_year_str = str(current_year)
+        default_index = available_years.index(current_year_str) if current_year_str in available_years else 0
+            
+        with c_col2: select_y = st.selectbox("Select Year", available_years, index=default_index)
+        
         full_month = f"{select_m}, {select_y}"
         
         month_num = months_list.index(select_m) + 1
@@ -246,14 +255,9 @@ with col2:
                     total_ot_emp = rec['ot_hrs'] * rec['ot_rate']
                     net_final = net_p + total_ot_emp + rec['bonus']
                     
-                    # সিগনেচার ও সিলের ইমেজ কন্ডিশনাল রেন্ডারিং এবং ওভারল্যাপিং স্টাইল
                     sig_html_element = ""
-                    
-                    # প্রথমে সিলটি নিচে ব্যাকগ্রাউন্ড হিসেবে বসবে
                     if seal_base64_str:
                         sig_html_element += f"<img src='data:image/png;base64,{seal_base64_str}' style='max-height: 75px; width: auto; display: block; margin: 0 auto -45px auto; z-index: 8; position: relative; opacity: 0.85;' alt='Seal'>"
-                    
-                    # সিগনেচারটি সিলের ওপরে ভাসবে
                     if sig_base64_str:
                         sig_html_element += f"<img src='data:image/png;base64,{sig_base64_str}' style='max-height: 60px; width: auto; display: block; margin: 0 auto -25px auto; z-index: 12; position: relative;' alt='Signature'>"
                     
@@ -394,7 +398,6 @@ with col2:
                         st.success(f"Successfully saved records!")
                         st.rerun()
 
-            # --- HTML/CSS PRINTABLE LEDGER SHEET SYSTEM ---
             st.markdown("---")
             st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
 
