@@ -258,7 +258,7 @@ with col2:
                 search_results = [r for r in rows if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()]
                 for emp in search_results: render_inline_management(emp, prefix="search_tab")
 
-        # --- TAB 1: INDIVIDUAL PAY SLIP (ULTRA PREMIUM CLEAN DESIGN) ---
+        # --- TAB 1: INDIVIDUAL PAY SLIP (ULTRA PREMIUM FINTECH DESIGN) ---
         with tab1:
             pay_search = st.text_input("Enter Employee ID or Name for Pay Slip", key="pay_slip_search_input")
             if pay_search:
@@ -287,7 +287,7 @@ with col2:
 
                     # Clean FinTech Style Pay Slip Preview Layout
                     payslip_preview_html = f"""
-                    <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; padding: 32px; background: white; color: black; border: 1px solid #e2e8f0; border-radius: 16px; max-width: 680px; margin: 15px auto; box-sizing: border-box; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
+                    <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; padding: 35px; background: white; color: black; border: 1px solid #e2e8f0; border-radius: 16px; max-width: 680px; margin: 15px auto; box-sizing: border-box; box-shadow: 0 20px 40px rgba(0,0,0,0.05);">
                         
                         <!-- Logo & Header Bar -->
                         <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #1F4E78;">
@@ -295,7 +295,7 @@ with col2:
                         </div>
                         
                         <!-- Title Center & Month/Year Right-Aligned -->
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; width: 100%;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; width: 100%;">
                             <div style="width: 25%;"></div>
                             <div style="width: 50%; text-align: center;">
                                 <span style="font-size: 16px; color: #1F4E78; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px;">Employee Pay Slip</span>
@@ -305,26 +305,26 @@ with col2:
                             </div>
                         </div>
                         
-                        <!-- NEW CLEAN LIFTED DESIGN - NO BOXES/LINES FOR DETAILS, SLICK TYPOGRAPHY -->
-                        <div style="background-color: #FDFDFD; border-radius: 12px; padding: 20px; margin-bottom: 28px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);">
-                            <table style="width: 100%; font-size: 13px; border-collapse: collapse; line-height: 1.9; color: #1A202C;">
+                        <!-- ULTRA PREMIUM BOX-LESS TEXT DESIGN WITH MICRO ICONOGRAPHY -->
+                        <div style="margin-bottom: 35px; padding: 0 10px;">
+                            <table style="width: 100%; font-size: 13px; border-collapse: collapse; line-height: 2.2; color: #1A202C;">
                                 <tr>
-                                    <td style="padding: 4px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096; width: 24%;">Employee ID</td>
-                                    <td style="padding: 4px 0; font-weight: 700; color: #1A202C; width: 28%; font-size: 13.5px;">#{selected_emp[0]}</td>
-                                    <td style="padding: 4px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096; width: 22%;">Department</td>
-                                    <td style="padding: 4px 0; color: #1A202C; font-weight: 700; width: 26%; font-size: 13px;">{selected_emp[4]}</td>
+                                    <td style="padding: 6px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #718096; width: 24%;">🆔 Employee ID</td>
+                                    <td style="padding: 6px 0; font-weight: 700; color: #1A202C; width: 28%; font-size: 14px;">#{selected_emp[0]}</td>
+                                    <td style="padding: 6px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #718096; width: 22%;">🏢 Department</td>
+                                    <td style="padding: 6px 0; color: #1F4E78; font-weight: 700; width: 26%; font-size: 13.5px;">{selected_emp[4]}</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding: 4px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096;">Full Name</td>
-                                    <td style="padding: 4px 0; font-weight: 700; color: #1F4E78; font-size: 14px;">{selected_emp[1]}</td>
-                                    <td style="padding: 4px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096;">Designation</td>
-                                    <td style="padding: 4px 0; color: #1A202C; font-weight: 700; font-size: 13px;">{selected_emp[2]}</td>
+                                    <td style="padding: 6px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #718096;">👤 Full Name</td>
+                                    <td style="padding: 6px 0; font-weight: 700; color: #1A202C; font-size: 14px;">{selected_emp[1]}</td>
+                                    <td style="padding: 6px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #718096;">🎯 Designation</td>
+                                    <td style="padding: 6px 0; color: #1F4E78; font-weight: 700; font-size: 13.5px;">{selected_emp[2]}</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding: 4px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096;">Category</td>
-                                    <td style="padding: 4px 0; color: #1A202C; font-weight: 700; font-size: 13px;">{selected_emp[3]}</td>
-                                    <td style="padding: 4px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096;">Attendance</td>
-                                    <td style="padding: 4px 0; font-weight: 700; color: #2B6CB0; font-size: 12px; background-color: #EBF8FF; display: inline-block; padding: 2px 12px; border-radius: 8px; border: 1px solid #BEE3F8; margin-top: 4px;">{rec['present']}P  /  {rec['absent']}A</td>
+                                    <td style="padding: 6px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #718096;">🏷️ Category</td>
+                                    <td style="padding: 6px 0; color: #1A202C; font-weight: 700; font-size: 13.5px;">{selected_emp[3]}</td>
+                                    <td style="padding: 6px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #718096;">📅 Attendance</td>
+                                    <td style="padding: 6px 0; font-weight: 700; color: #2B6CB0; font-size: 12px; background-color: #EBF8FF; display: inline-block; padding: 0px 12px; border-radius: 8px; border: 1px solid #BEE3F8; margin-top: 4px; line-height: 1.8;">{rec['present']}P  /  {rec['absent']}A</td>
                                 </tr>
                             </table>
                         </div>
@@ -386,7 +386,7 @@ with col2:
                         </div>
                     </div>
                     """
-                    st.components.v1.html(payslip_preview_html, height=540, scrolling=True)
+                    st.components.v1.html(payslip_preview_html, height=550, scrolling=True)
                     
                     pdf_emp_data = (
                         selected_emp[0], selected_emp[1], selected_emp[2], selected_emp[3], selected_emp[4],
