@@ -305,7 +305,7 @@ with col2:
                             </div>
                         </div>
                         
-                        <!-- NEW CLEAN LIFTED DESIGN - NO LEFT LINE, NO DEPT BOX, ADVANCED FINTECH CARD -->
+                        <!-- NEW CLEAN LIFTED DESIGN - NO BOXES/LINES FOR DETAILS, SLICK TYPOGRAPHY -->
                         <div style="background-color: #FDFDFD; border-radius: 12px; padding: 20px; margin-bottom: 28px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);">
                             <table style="width: 100%; font-size: 13px; border-collapse: collapse; line-height: 1.9; color: #1A202C;">
                                 <tr>
@@ -318,11 +318,11 @@ with col2:
                                     <td style="padding: 4px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096;">Full Name</td>
                                     <td style="padding: 4px 0; font-weight: 700; color: #1F4E78; font-size: 14px;">{selected_emp[1]}</td>
                                     <td style="padding: 4px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096;">Designation</td>
-                                    <td style="padding: 4px 0; color: #4A5568; font-weight: 600;">{selected_emp[2]}</td>
+                                    <td style="padding: 4px 0; color: #1A202C; font-weight: 700; font-size: 13px;">{selected_emp[2]}</td>
                                 </tr>
                                 <tr>
                                     <td style="padding: 4px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096;">Category</td>
-                                    <td style="padding: 4px 0; color: #4A5568; font-weight: 500;">{selected_emp[3]}</td>
+                                    <td style="padding: 4px 0; color: #1A202C; font-weight: 700; font-size: 13px;">{selected_emp[3]}</td>
                                     <td style="padding: 4px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096;">Attendance</td>
                                     <td style="padding: 4px 0; font-weight: 700; color: #2B6CB0; font-size: 12px; background-color: #EBF8FF; display: inline-block; padding: 2px 12px; border-radius: 8px; border: 1px solid #BEE3F8; margin-top: 4px;">{rec['present']}P  /  {rec['absent']}A</td>
                                 </tr>
