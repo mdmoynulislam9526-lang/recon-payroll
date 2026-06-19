@@ -180,21 +180,32 @@ with col2:
         saved_db_tracker = {str(r[1]): {"present": r[2], "absent": r[3], "fine": r[4], "ot_hrs": r[5], "ot_rate": r[6], "bonus": r[7], "advance": r[8]} for r in db_records}
 
         total_payout = 0.0
+        total_bonus = 0.0
+        total_ot = 0.0
+        total_deductions = 0.0
+
         for r in rows:
             eid, _, _, cat, _, base_sal = r
             rec = saved_db_tracker.get(str(eid), {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
             
-            _, _, _, _, _, net_p, _ = calculate_salary_breakdown(
+            _, _, _, _, absent_cut, net_p, _ = calculate_salary_breakdown(
                 base_sal, rec['absent'], rec['fine'], cat, rec['present'], rec['advance']
             )
-            ot_total = rec['ot_hrs'] * rec['ot_rate']
-            final_payable = net_p + ot_total + rec['bonus']
+            ot_earned = rec['ot_hrs'] * rec['ot_rate']
+            final_payable = net_p + ot_earned + rec['bonus']
+            
             total_payout += final_payable
+            total_bonus += rec['bonus']
+            total_ot += ot_earned
+            total_deductions += (absent_cut + rec['fine'])
 
         st.markdown("### 📊 Financial Dashboard Summary")
-        m_col1, m_col2 = st.columns(2)
+        m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
         m_col1.metric("Total Employees", len(rows))
-        m_col2.metric("Total Payout (Tk)", f"{total_payout:,.2f}")
+        m_col2.metric("Total Bonus (Tk)", f"{total_bonus:,.2f}")
+        m_col3.metric("Total Overtime (Tk)", f"{total_ot:,.2f}")
+        m_col4.metric("Total Fine & Abs Cut (Tk)", f"{total_deductions:,.2f}")
+        m_col5.metric("Total Payout (Tk)", f"{total_payout:,.2f}")
         st.markdown("---")
 
         tab_emp, tab0, tab1, tab2 = st.tabs(["👥 All Employees", "🔍 Search Employee", "📄 Individual Pay Slip", "📊 Attendance & Payroll Processor"])
@@ -229,8 +240,8 @@ with col2:
                         selected_emp[5], rec['absent'], rec['fine'], selected_emp[3], rec['present'], rec['advance']
                     )
                     
-                    total_ot = rec['ot_hrs'] * rec['ot_rate']
-                    net_final = net_p + total_ot + rec['bonus']
+                    total_ot_emp = rec['ot_hrs'] * rec['ot_rate']
+                    net_final = net_p + total_ot_emp + rec['bonus']
                     
                     # সিগনেচার ও সিলের ইমেজ কন্ডিশনাল রেন্ডারিং এবং ওভারল্যাপিং স্টাইল
                     sig_html_element = ""
@@ -304,7 +315,7 @@ with col2:
                                 </tr>
                                 <tr>
                                     <td style="padding: 6px; border-bottom: 1px dashed #eee; color: green;">Overtime ({rec['ot_hrs']} hrs)</td>
-                                    <td style="padding: 6px; text-align: right; border-bottom: 1px dashed #eee; color: green;">{total_ot:,.2f}</td>
+                                    <td style="padding: 6px; text-align: right; border-bottom: 1px dashed #eee; color: green;">{total_ot_emp:,.2f}</td>
                                     <td style="padding: 6px; border-bottom: 1px dashed #eee; padding-left: 15px;"></td>
                                     <td style="padding: 6px; text-align: right; border-bottom: 1px dashed #eee;"></td>
                                 </tr>
