@@ -1,3 +1,8 @@
+আরে, অত্যন্ত দুঃখিত! ওটা কোড লেখার সময় টাইপিং ভুলের কারণে চলে এসেছিল। Designation-এর ঠিক নিচের লাইনে end; চলে আসার কারণে আপনার কোডটি রান করলে পাইথনে SyntaxError দেখাবে।
+
+আমি ওটা সম্পূর্ণ পরিষ্কার করে নিচে আবার ফ্রেশ কোডটি দিয়ে দিচ্ছি। আপনি আগের কোডটি মুছে এটি পেস্ট করে দিন, এবার একদম পারফেক্টলি চলবে:
+
+Python
 import streamlit as st
 import sqlite3
 from datetime import datetime
@@ -289,12 +294,10 @@ with col2:
                     payslip_preview_html = f"""
                     <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; padding: 35px; background: white; color: black; border: 1px solid #e2e8f0; border-radius: 12px; max-width: 680px; margin: 15px auto; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
                         
-                        <!-- Logo & Header Bar -->
                         <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #1F4E78;">
                             {"<div style='margin-bottom: 5px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 65px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
                         </div>
                         
-                        <!-- Title & Period -->
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; width: 100%;">
                             <div style="width: 25%;"></div>
                             <div style="width: 50%; text-align: center;">
@@ -305,10 +308,8 @@ with col2:
                             </div>
                         </div>
                         
-                        <!-- 💎 NEW PREMIUM TEXT PANEL GRID -->
                         <div style="margin-bottom: 35px; padding: 0 5px;">
                             <table style="width: 100%; border-collapse: collapse; color: #1A202C;">
-                                <!-- Row 1: ID & Department -->
                                 <tr>
                                     <td style="padding: 10px 0; width: 50%; vertical-align: top;">
                                         <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096; line-height: 1.2; margin-bottom: 4px;">Employee ID</div>
@@ -319,10 +320,8 @@ with col2:
                                         <div style="font-size: 13.5px; font-weight: 600; color: #1F4E78;">{selected_emp[4]}</div>
                                     </td>
                                 </tr>
-                                <!-- Border Divider Line -->
                                 <tr><td colspan="2" style="border-bottom: 1px solid #EDF2F7; padding: 0;"></td></tr>
                                 
-                                <!-- Row 2: Full Name & Designation -->
                                 <tr>
                                     <td style="padding: 12px 0; vertical-align: top;">
                                         <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096; line-height: 1.2; margin-bottom: 4px;">Full Name</div>
@@ -332,11 +331,9 @@ with col2:
                                         <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096; line-height: 1.2; margin-bottom: 4px;">Designation</div>
                                         <div style="font-size: 13.5px; font-weight: 600; color: #1F4E78;">{selected_emp[2]}</div>
                                     </td>
-                                end;
-                                <!-- Border Divider Line -->
+                                </tr>
                                 <tr><td colspan="2" style="border-bottom: 1px solid #EDF2F7; padding: 0;"></td></tr>
                                 
-                                <!-- Row 3: Category & Attendance -->
                                 <tr>
                                     <td style="padding: 12px 0; vertical-align: top;">
                                         <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096; line-height: 1.2; margin-bottom: 4px;">Category</div>
@@ -352,7 +349,6 @@ with col2:
                             </table>
                         </div>
                         
-                        <!-- Earnings & Deductions Table -->
                         <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 25px;">
                             <thead>
                                 <tr style="background-color: #F8FAFC; border-top: 1px solid #E2E8F0; border-bottom: 1px solid #E2E8F0;">
@@ -400,7 +396,6 @@ with col2:
                             </tbody>
                         </table>
                         
-                        <!-- Signature Section -->
                         <div style="margin-top: 50px; display: flex; justify-content: flex-end;">
                             <div style="text-align: center; width: 190px; position: relative;">
                                 {sig_html_element}
