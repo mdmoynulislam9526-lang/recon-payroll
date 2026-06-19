@@ -258,7 +258,7 @@ with col2:
                 search_results = [r for r in rows if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()]
                 for emp in search_results: render_inline_management(emp, prefix="search_tab")
 
-        # --- TAB 1: INDIVIDUAL PAY SLIP (UPDATED: LOGO WITH UNDERLINE BRANDING) ---
+        # --- TAB 1: INDIVIDUAL PAY SLIP (UPDATED: MOTA LINE + ORIGINAL STYLES) ---
         with tab1:
             pay_search = st.text_input("Enter Employee ID or Name for Pay Slip", key="pay_slip_search_input")
             if pay_search:
@@ -285,18 +285,22 @@ with col2:
                     if not sig_base64_str and not seal_base64_str:
                         sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[Images Not Found]</div>"
 
-                    # লোগোর নিচে হালকা সলিড বর্ডার লাইন ডিজাইন
+                    # লোগোর নিচে ৩ পিক্সেল মোটা সলিড বর্ডার দেওয়া হয়েছে এবং বাকি অংশ আদি নিয়মে হুবহু ব্যাক করা হয়েছে
                     payslip_preview_html = f"""
                     <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; padding: 30px; background: white; color: black; border: 1px solid #e0e0e0; border-radius: 12px; max-width: 680px; margin: 15px auto; box-sizing: border-box; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                        <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1.5px solid #E2E6EA;">
+                        
+                        <!-- লোগো এবং ৩ পিক্সেল মোটা বর্ডার লাইন -->
+                        <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #1F4E78;">
                             {"<div style='margin-bottom: 5px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 65px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
                         </div>
                         
+                        <!-- আগের মত ক্লাসিক শিরোনাম -->
                         <div style="text-align: center; margin-bottom: 25px;">
                             <span style="font-size: 17px; color: #1F4E78; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; border-right: 2px solid #ddd; padding-right: 12px; margin-right: 8px;">Employee Pay Slip</span>
                             <span style="font-size: 14px; color: #555; font-weight: 600;">{full_month}</span>
                         </div>
                         
+                        <!-- আগের মত অরিজিনাল এমপ্লয়ি ডিটেইলস টেবিল স্টাইল -->
                         <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 20px; line-height: 1.6;">
                             <tr>
                                 <td style="padding: 6px 0; font-weight: 600; color: #555; width: 28%;">Employee ID:</td>
@@ -318,6 +322,7 @@ with col2:
                             </tr>
                         </table>
                         
+                        <!-- আগের মত অরিজিনাল আর্নিংস এবং ডিডাকশন টেবিল লেআউট -->
                         <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 25px;">
                             <thead>
                                 <tr style="background-color: #F8F9FA; border-top: 1px solid #e9ecef; border-bottom: 1px solid #e9ecef;">
@@ -434,10 +439,10 @@ with col2:
             st.markdown("---")
             st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
 
-            # --- MAIN SUMMARY SHEET (ALSO UPDATED WITH THE LOGO UNDERLINE BRANDING) ---
+            # --- MAIN SUMMARY SHEET (UPDATED WITH MOTA LINE BRANDING) ---
             print_html = f"""
             <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; padding: 25px; background: white; color: black; border-radius: 12px;">
-                <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1.5px solid #E2E6EA;">
+                <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #1F4E78;">
                     {"<div style='margin-bottom: 5px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 70px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
                 </div>
                 
