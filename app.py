@@ -125,7 +125,9 @@ def render_inline_management(r, prefix=""):
         with col_act2:
             if st.button("Delete ❌", key=f"{prefix}_del_{eid}", use_container_width=True, type="secondary"):
                 conn = get_db_connection()
+                # ক্যাসকেড ডিলিট: কর্মচারী ডিলিট করলে তার অ্যাটেনডেন্স রেকর্ডও ডিলিট হবে
                 conn.cursor().execute("DELETE FROM employees_final_version WHERE emp_id=?", (eid,))
+                conn.cursor().execute("DELETE FROM monthly_attendance_records WHERE emp_id=?", (eid,))
                 conn.commit()
                 conn.close()
                 st.success("Deleted!")
@@ -133,6 +135,8 @@ def render_inline_management(r, prefix=""):
 
         if st.session_state.get(f"emode_{prefix}_{eid}", False):
             with st.form(key=f"form_{prefix}_{eid}"):
+                # নতুন ফিচার: আইডি পরিবর্তন করার ইনপুট ফিল্ড
+                ch_id = st.text_input("Edit Employee ID", value=eid).strip()
                 ch_name = st.text_input("Edit Name", value=ename)
                 dept_list = ["Production", "Quality Control", "Development", "Maintenance", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"]
                 ch_dept = st.selectbox("Edit Department", dept_list, index=dept_list.index(edept) if edept in dept_list else 0)
@@ -144,13 +148,39 @@ def render_inline_management(r, prefix=""):
                 b1, b2 = st.columns(2)
                 with b1:
                     if st.form_submit_button("Save Changes", use_container_width=True):
-                        conn = get_db_connection()
-                        conn.cursor().execute("UPDATE employees_final_version SET name=?, designation=?, category=?, department=?, salary=? WHERE emp_id=?", (ch_name, ch_desg, ch_cat, ch_dept, float(ch_salary), eid))
-                        conn.commit()
-                        conn.close()
-                        st.session_state[f"emode_{prefix}_{eid}"] = False
-                        st.success("Updated!")
-                        st.rerun()
+                        if not re.match(r"^[0-9]+$", ch_id):
+                            st.error("⚠️ ID must only contain numbers.")
+                        else:
+                            try:
+                                conn = get_db_connection()
+                                cursor = conn.cursor()
+                                
+                                # ১. যদি আইডি পরিবর্তন করা হয়
+                                if ch_id != eid:
+                                    # চেক করা হচ্ছে নতুন আইডিটি অন্য কারো আছে কিনা
+                                    exists = cursor.execute("SELECT 1 FROM employees_final_version WHERE emp_id=?", (ch_id,)).fetchone()
+                                    if exists:
+                                        st.error(f"⚠️ Employee ID '{ch_id}' already exists!")
+                                        conn.close()
+                                        return
+                                    
+                                    # প্রথমে নতুন আইডি দিয়ে একটি রো তৈরি করা (SQLite এ প্রাইমারি কি সরাসরি আপডেট করার নিরাপদ বিকল্প)
+                                    cursor.execute("INSERT INTO employees_final_version VALUES (?, ?, ?, ?, ?, ?)", (ch_id, ch_name, ch_desg, ch_cat, ch_dept, float(ch_salary)))
+                                    # অ্যাটেনডেন্স রেকর্ডের আইডিগুলো নতুন আইডিতে শিফট করা
+                                    cursor.execute("UPDATE monthly_attendance_records SET emp_id=? WHERE emp_id=?", (ch_id, eid))
+                                    # পুরোনো আইডির রো ডিলিট করে দেওয়া
+                                    cursor.execute("DELETE FROM employees_final_version WHERE emp_id=?", (eid,))
+                                else:
+                                    # ২. আইডি সেম থাকলে সাধারণ আপডেট
+                                    cursor.execute("UPDATE employees_final_version SET name=?, designation=?, category=?, department=?, salary=? WHERE emp_id=?", (ch_name, ch_desg, ch_cat, ch_dept, float(ch_salary), eid))
+                                
+                                conn.commit()
+                                conn.close()
+                                st.session_state[f"emode_{prefix}_{eid}"] = False
+                                st.success("Updated Successfully!")
+                                st.rerun()
+                            except ValueError:
+                                st.error("Salary must be a number!")
                 with b2:
                     if st.form_submit_button("Cancel", use_container_width=True):
                         st.session_state[f"emode_{prefix}_{eid}"] = False
@@ -171,7 +201,6 @@ with col2:
         with c_col1: select_m = st.selectbox("Select Month", months_list, index=int(datetime.now().strftime("%m")) - 1)
         
         current_year = datetime.now().year
-        # এখানে রেঞ্জ বাড়িয়ে চলতি বছরের ৫০ বছর পর পর্যন্ত করা হলো, যাতে কোনো লিমিটেশন না থাকে
         available_years = [str(y) for y in range(2023, current_year + 51)] 
         current_year_str = str(current_year)
         default_index = available_years.index(current_year_str) if current_year_str in available_years else 0
