@@ -258,7 +258,7 @@ with col2:
                 search_results = [r for r in rows if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()]
                 for emp in search_results: render_inline_management(emp, prefix="search_tab")
 
-        # --- TAB 1: INDIVIDUAL PAY SLIP (UPDATED MINIMALIST DESIGN) ---
+        # --- TAB 1: INDIVIDUAL PAY SLIP (UPDATED: LOGO WITH UNDERLINE BRANDING) ---
         with tab1:
             pay_search = st.text_input("Enter Employee ID or Name for Pay Slip", key="pay_slip_search_input")
             if pay_search:
@@ -285,18 +285,18 @@ with col2:
                     if not sig_base64_str and not seal_base64_str:
                         sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[Images Not Found]</div>"
 
-                    # ক্লিন এবং মডার্ন ডিজাইন (কোনো ড্যাশ লাইন নেই)
+                    # লোগোর নিচে হালকা সলিড বর্ডার লাইন ডিজাইন
                     payslip_preview_html = f"""
                     <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; padding: 30px; background: white; color: black; border: 1px solid #e0e0e0; border-radius: 12px; max-width: 680px; margin: 15px auto; box-sizing: border-box; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                        <div style="text-align: center; margin-bottom: 30px;">
-                            {"<div style='margin-bottom: 15px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 65px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
-                            
-                            <!-- ক্লিন অ্যান্ড স্লিক টাইটেল বার -->
-                            <div style="margin-top: 10px;">
-                                <span style="font-size: 18px; color: #1F4E78; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; border-right: 2px solid #ccc; padding-right: 12px; margin-right: 8px;">Employee Pay Slip</span>
-                                <span style="font-size: 15px; color: #555; font-weight: 600;">{full_month}</span>
-                            </div>
+                        <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1.5px solid #E2E6EA;">
+                            {"<div style='margin-bottom: 5px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 65px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
                         </div>
+                        
+                        <div style="text-align: center; margin-bottom: 25px;">
+                            <span style="font-size: 17px; color: #1F4E78; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; border-right: 2px solid #ddd; padding-right: 12px; margin-right: 8px;">Employee Pay Slip</span>
+                            <span style="font-size: 14px; color: #555; font-weight: 600;">{full_month}</span>
+                        </div>
+                        
                         <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 20px; line-height: 1.6;">
                             <tr>
                                 <td style="padding: 6px 0; font-weight: 600; color: #555; width: 28%;">Employee ID:</td>
@@ -373,7 +373,7 @@ with col2:
                         </div>
                     </div>
                     """
-                    st.components.v1.html(payslip_preview_html, height=520, scrolling=True)
+                    st.components.v1.html(payslip_preview_html, height=540, scrolling=True)
                     
                     pdf_emp_data = (
                         selected_emp[0], selected_emp[1], selected_emp[2], selected_emp[3], selected_emp[4],
@@ -434,16 +434,16 @@ with col2:
             st.markdown("---")
             st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
 
-            # --- MAIN SUMMARY SHEET (ALSO UPDATED WITH MINIMAL DESIGN) ---
+            # --- MAIN SUMMARY SHEET (ALSO UPDATED WITH THE LOGO UNDERLINE BRANDING) ---
             print_html = f"""
             <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; padding: 25px; background: white; color: black; border-radius: 12px;">
+                <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1.5px solid #E2E6EA;">
+                    {"<div style='margin-bottom: 5px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 70px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
+                </div>
+                
                 <div style="text-align: center; margin-bottom: 30px;">
-                    {"<div style='margin-bottom: 15px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 70px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
-                    
-                    <div style="margin-top: 10px;">
-                        <span style="font-size: 18px; color: #1F4E78; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; border-right: 2px solid #ccc; padding-right: 12px; margin-right: 8px;">Employee Monthly Payroll Statement Sheet</span>
-                        <span style="font-size: 15px; color: #555; font-weight: 600;">{full_month}</span>
-                    </div>
+                    <span style="font-size: 17px; color: #1F4E78; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; border-right: 2px solid #ddd; padding-right: 12px; margin-right: 8px;">Employee Monthly Payroll Statement Sheet</span>
+                    <span style="font-size: 14px; color: #555; font-weight: 600;">Statement Period: {full_month}</span>
                 </div>
             """
 
