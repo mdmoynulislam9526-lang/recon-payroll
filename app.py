@@ -258,7 +258,7 @@ with col2:
                 search_results = [r for r in rows if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()]
                 for emp in search_results: render_inline_management(emp, prefix="search_tab")
 
-        # --- TAB 1: INDIVIDUAL PAY SLIP (PREMIUM MINIMALIST TWO-COLUMN DESIGN) ---
+        # --- TAB 1: INDIVIDUAL PAY SLIP (CLASSIC EXECUTIVE ROWS) ---
         with tab1:
             pay_search = st.text_input("Enter Employee ID or Name for Pay Slip", key="pay_slip_search_input")
             if pay_search:
@@ -285,60 +285,55 @@ with col2:
                     if not sig_base64_str and not seal_base64_str:
                         sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[Images Not Found]</div>"
 
-                    # 💎 PREMIUM DETAILS LAYOUT BLOCK
+                    # 💎 CLASSIC EXECUTIVE ROW-BASED DESIGN
                     payslip_preview_html = f"""
-                    <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; padding: 35px; background: white; color: black; border: 1px solid #e2e8f0; border-radius: 12px; max-width: 680px; margin: 15px auto; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,0.03);">
+                    <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 35px; background: white; color: black; border: 1px solid #dcdcdc; border-radius: 8px; max-width: 680px; margin: 15px auto; box-sizing: border-box; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
                         
-                        <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #1F4E78;">
+                        <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 2.5px solid #1F4E78;">
                             {"<div style='margin-bottom: 5px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 65px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
                         </div>
                         
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; width: 100%;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; width: 100%;">
                             <div style="width: 25%;"></div>
                             <div style="width: 50%; text-align: center;">
-                                <span style="font-size: 16px; color: #1F4E78; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Employee Pay Slip</span>
+                                <span style="font-size: 16px; color: #1F4E78; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Employee Pay Slip</span>
                             </div>
                             <div style="width: 25%; text-align: right;">
-                                <span style="font-size: 12px; color: #1F4E78; font-weight: 700; background-color: #F0F4F8; padding: 5px 12px; border-radius: 4px; border: 1px solid #D2E0EC; text-transform: uppercase;">{select_m[:3]} {select_y}</span>
+                                <span style="font-size: 12px; color: #444; font-weight: 700; background-color: #f1f1f1; padding: 4px 10px; border-radius: 3px; border: 1px solid #ccc; text-transform: uppercase;">{select_m[:3]} {select_y}</span>
                             </div>
                         </div>
                         
-                        <div style="margin-bottom: 35px; padding: 0 5px;">
-                            <table style="width: 100%; border-collapse: collapse; color: #1A202C;">
+                        <div style="margin-bottom: 30px; padding: 5px 0;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13.5px; color: #222;">
                                 <tr>
-                                    <td style="padding: 10px 0; width: 50%; vertical-align: top;">
-                                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096; line-height: 1.2; margin-bottom: 4px;">Employee ID</div>
-                                        <div style="font-size: 14px; font-weight: 700; color: #1A202C;">#{selected_emp[0]}</div>
-                                    </td>
-                                    <td style="padding: 10px 0; width: 50%; vertical-align: top;">
-                                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096; line-height: 1.2; margin-bottom: 4px;">Department</div>
-                                        <div style="font-size: 13.5px; font-weight: 600; color: #1F4E78;">{selected_emp[4]}</div>
-                                    </td>
+                                    <td style="padding: 7px 0; color: #666; width: 30%;">Employee ID:</td>
+                                    <td style="padding: 7px 0; font-weight: 700; color: #111;">#{selected_emp[0]}</td>
                                 </tr>
-                                <tr><td colspan="2" style="border-bottom: 1px solid #EDF2F7; padding: 0;"></td></tr>
-                                
+                                <tr><td colspan="2" style="border-bottom: 1px dashed #e0e0e0;"></td></tr>
                                 <tr>
-                                    <td style="padding: 12px 0; vertical-align: top;">
-                                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096; line-height: 1.2; margin-bottom: 4px;">Full Name</div>
-                                        <div style="font-size: 14.5px; font-weight: 700; color: #1A202C;">{selected_emp[1]}</div>
-                                    </td>
-                                    <td style="padding: 12px 0; vertical-align: top;">
-                                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096; line-height: 1.2; margin-bottom: 4px;">Designation</div>
-                                        <div style="font-size: 13.5px; font-weight: 600; color: #1F4E78;">{selected_emp[2]}</div>
-                                    </td>
+                                    <td style="padding: 7px 0; color: #666;">Full Name:</td>
+                                    <td style="padding: 7px 0; font-weight: 700; color: #111;">{selected_emp[1]}</td>
+                                end;
+                                <tr><td colspan="2" style="border-bottom: 1px dashed #e0e0e0;"></td></tr>
+                                <tr>
+                                    <td style="padding: 7px 0; color: #666;">Category:</td>
+                                    <td style="padding: 7px 0; font-weight: 600; color: #333;">{selected_emp[3]}</td>
                                 </tr>
-                                <tr><td colspan="2" style="border-bottom: 1px solid #EDF2F7; padding: 0;"></td></tr>
-                                
+                                <tr><td colspan="2" style="border-bottom: 1px dashed #e0e0e0;"></td></tr>
                                 <tr>
-                                    <td style="padding: 12px 0; vertical-align: top;">
-                                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096; line-height: 1.2; margin-bottom: 4px;">Category</div>
-                                        <div style="font-size: 13.5px; font-weight: 600; color: #1A202C;">{selected_emp[3]}</div>
-                                    </td>
-                                    <td style="padding: 12px 0; vertical-align: top;">
-                                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: #718096; line-height: 1.2; margin-bottom: 6px;">Attendance Status</div>
-                                        <div style="font-size: 12px; font-weight: 700; color: #2B6CB0; background-color: #F0F4F8; display: inline-block; padding: 3px 10px; border-radius: 4px; border: 1px solid #D2E0EC;">
-                                            {rec['present']} Present &nbsp;/&nbsp; {rec['absent']} Absent
-                                        </div>
+                                    <td style="padding: 7px 0; color: #666;">Department:</td>
+                                    <td style="padding: 7px 0; font-weight: 600; color: #1F4E78;">{selected_emp[4]}</td>
+                                </tr>
+                                <tr><td colspan="2" style="border-bottom: 1px dashed #e0e0e0;"></td></tr>
+                                <tr>
+                                    <td style="padding: 7px 0; color: #666;">Designation:</td>
+                                    <td style="padding: 7px 0; font-weight: 600; color: #1F4E78;">{selected_emp[2]}</td>
+                                </tr>
+                                <tr><td colspan="2" style="border-bottom: 1px dashed #e0e0e0;"></td></tr>
+                                <tr>
+                                    <td style="padding: 7px 0; color: #666;">Attendance Status:</td>
+                                    <td style="padding: 7px 0; font-weight: 700; color: #2B6CB0;">
+                                        {rec['present']} Days Present &nbsp;|&nbsp; {rec['absent']} Days Absent
                                     </td>
                                 </tr>
                             </table>
