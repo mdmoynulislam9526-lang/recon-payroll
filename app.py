@@ -258,7 +258,7 @@ with col2:
                 search_results = [r for r in rows if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()]
                 for emp in search_results: render_inline_management(emp, prefix="search_tab")
 
-        # --- TAB 1: INDIVIDUAL PAY SLIP (UPDATED ALIGNMENT) ---
+        # --- TAB 1: INDIVIDUAL PAY SLIP (UPDATED TABLE STRUCTURE) ---
         with tab1:
             pay_search = st.text_input("Enter Employee ID or Name for Pay Slip", key="pay_slip_search_input")
             if pay_search:
@@ -285,7 +285,7 @@ with col2:
                     if not sig_base64_str and not seal_base64_str:
                         sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[Images Not Found]</div>"
 
-                    # পে-স্লিপ লেআউট: শিরোনাম মাঝখানে এবং মাস ও বছর সম্পূর্ণ ডানপাশে
+                    # পে-স্লিপ লেআউট: সুবিন্যস্ত টেবিল স্ট্রাকচার
                     payslip_preview_html = f"""
                     <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; padding: 30px; background: white; color: black; border: 1px solid #e0e0e0; border-radius: 12px; max-width: 680px; margin: 15px auto; box-sizing: border-box; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                         
@@ -294,9 +294,9 @@ with col2:
                             {"<div style='margin-bottom: 5px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 65px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
                         </div>
                         
-                        <!-- নতুন এলাইনমেন্ট: শিরোনাম মাঝখানে এবং মাস/বছর ডানপাশে -->
+                        <!-- শিরোনাম মাঝখানে এবং মাস/বছর ডানপাশে -->
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; width: 100%;">
-                            <div style="width: 30%;"></div> <!-- ফ্লেক্স বক্স ব্যালেন্স করার জন্য ফাঁকা বাম সাইড -->
+                            <div style="width: 30%;"></div>
                             <div style="width: 40%; text-align: center;">
                                 <span style="font-size: 17px; color: #1F4E78; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;">Employee Pay Slip</span>
                             </div>
@@ -305,8 +305,8 @@ with col2:
                             </div>
                         </div>
                         
-                        <!-- এমপ্লয়ি ডিটেইলস টেবিল স্টাইল -->
-                        <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 20px; line-height: 1.6;">
+                        <!-- এমপ্লয়ি ডিটেইলস টেবিল -->
+                        <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 25px; line-height: 1.6;">
                             <tr>
                                 <td style="padding: 6px 0; font-weight: 600; color: #555; width: 28%;">Employee ID:</td>
                                 <td style="padding: 6px 0; font-weight: 700; color: #000;">{selected_emp[0]}</td>
@@ -327,50 +327,50 @@ with col2:
                             </tr>
                         </table>
                         
-                        <!-- আর্নিংস এবং ডিডাকশন টেবিল লেআউট -->
+                        <!-- নতুন স্ট্রাকচার: সুবিন্যস্ত আর্নিংস এবং ডিডাকশন টেবিল লেআউট -->
                         <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 25px;">
                             <thead>
-                                <tr style="background-color: #F8F9FA; border-top: 1px solid #e9ecef; border-bottom: 1px solid #e9ecef;">
-                                    <th style="padding: 8px; text-align: left; color: #1F4E78; font-weight: 600;">Earnings</th>
-                                    <th style="padding: 8px; text-align: right; color: #1F4E78; font-weight: 600; width: 25%;">Amount (Tk)</th>
-                                    <th style="padding: 8px; text-align: left; color: #7F2020; font-weight: 600; padding-left: 20px;">Deductions</th>
-                                    <th style="padding: 8px; text-align: right; color: #7F2020; font-weight: 600; width: 25%;">Amount (Tk)</th>
+                                <tr style="background-color: #F8F9FA; border-top: 1px solid #dee2e6; border-bottom: 1px solid #dee2e6;">
+                                    <th style="padding: 10px 8px; text-align: left; color: #1F4E78; font-weight: 700; width: 30%; border-right: 1px solid #e9ecef;">Earnings</th>
+                                    <th style="padding: 10px 8px; text-align: right; color: #1F4E78; font-weight: 700; width: 20%; border-right: 2px solid #dee2e6;">Amount (Tk)</th>
+                                    <th style="padding: 10px 8px; text-align: left; color: #7F2020; font-weight: 700; width: 30%; padding-left: 15px; border-right: 1px solid #e9ecef;">Deductions</th>
+                                    <th style="padding: 10px 8px; text-align: right; color: #7F2020; font-weight: 700; width: 20%;">Amount (Tk)</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td style="padding: 8px; border-bottom: 1px dashed #f1f3f5;">Base Pay</td>
-                                    <td style="padding: 8px; text-align: right; border-bottom: 1px dashed #f1f3f5; font-weight: 500;">{gross:,.2f}</td>
-                                    <td style="padding: 8px; border-bottom: 1px dashed #f1f3f5; padding-left: 20px; color: #c00;">Absent Cut</td>
-                                    <td style="padding: 8px; text-align: right; border-bottom: 1px dashed #f1f3f5; color: #c00; font-weight: 500;">{absent_cut:,.2f}</td>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #f1f3f5; border-right: 1px solid #e9ecef;">Base Pay</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #f1f3f5; font-weight: 500; border-right: 2px solid #dee2e6;">{gross:,.2f}</td>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #f1f3f5; padding-left: 15px; color: #c00; border-right: 1px solid #e9ecef;">Absent Cut</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #f1f3f5; color: #c00; font-weight: 500;">{absent_cut:,.2f}</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding: 8px; border-bottom: 1px dashed #f1f3f5; color: #555;">House Rent</td>
-                                    <td style="padding: 8px; text-align: right; border-bottom: 1px dashed #f1f3f5; color: #555;">{house_rent:,.2f}</td>
-                                    <td style="padding: 8px; border-bottom: 1px dashed #f1f3f5; padding-left: 20px; color: #c00;">Fine / Penalty</td>
-                                    <td style="padding: 8px; text-align: right; border-bottom: 1px dashed #f1f3f5; color: #c00; font-weight: 500;">{rec['fine']:,.2f}</td>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #f1f3f5; color: #555; border-right: 1px solid #e9ecef;">House Rent</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #f1f3f5; color: #555; border-right: 2px solid #dee2e6;">{house_rent:,.2f}</td>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #f1f3f5; padding-left: 15px; color: #c00; border-right: 1px solid #e9ecef;">Fine / Penalty</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #f1f3f5; color: #c00; font-weight: 500;">{rec['fine']:,.2f}</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding: 8px; border-bottom: 1px dashed #f1f3f5; color: #555;">Medical</td>
-                                    <td style="padding: 8px; text-align: right; border-bottom: 1px dashed #f1f3f5; color: #555;">{medical:,.2f}</td>
-                                    <td style="padding: 8px; border-bottom: 1px dashed #f1f3f5; padding-left: 20px; color: #c00;">Advance Cut</td>
-                                    <td style="padding: 8px; text-align: right; border-bottom: 1px dashed #f1f3f5; color: #c00; font-weight: 500;">{adv_paid:,.2f}</td>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #f1f3f5; color: #555; border-right: 1px solid #e9ecef;">Medical</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #f1f3f5; color: #555; border-right: 2px solid #dee2e6;">{medical:,.2f}</td>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #f1f3f5; padding-left: 15px; color: #c00; border-right: 1px solid #e9ecef;">Advance Cut</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #f1f3f5; color: #c00; font-weight: 500;">{adv_paid:,.2f}</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding: 8px; border-bottom: 1px dashed #f1f3f5; color: green; font-weight: 500;">Overtime ({rec['ot_hrs']} hrs)</td>
-                                    <td style="padding: 8px; text-align: right; border-bottom: 1px dashed #f1f3f5; color: green; font-weight: 500;">{total_ot_emp:,.2f}</td>
-                                    <td style="padding: 8px; border-bottom: 1px dashed #f1f3f5; padding-left: 20px;"></td>
-                                    <td style="padding: 8px; text-align: right; border-bottom: 1px dashed #f1f3f5;"></td>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #f1f3f5; color: green; font-weight: 500; border-right: 1px solid #e9ecef;">Overtime ({rec['ot_hrs']} hrs)</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #f1f3f5; color: green; font-weight: 500; border-right: 2px solid #dee2e6;">{total_ot_emp:,.2f}</td>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #f1f3f5; border-right: 1px solid #e9ecef; padding-left: 15px;"></td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #f1f3f5;"></td>
                                 </tr>
                                 <tr>
-                                    <td style="padding: 8px; border-bottom: 1px solid #dee2e6; color: green; font-weight: 500;">Bonus</td>
-                                    <td style="padding: 8px; text-align: right; border-bottom: 1px solid #dee2e6; color: green; font-weight: 500;">{rec['bonus']:,.2f}</td>
-                                    <td style="padding: 8px; border-bottom: 1px solid #dee2e6; padding-left: 20px;"></td>
-                                    <td style="padding: 8px; text-align: right; border-bottom: 1px solid #dee2e6;"></td>
+                                    <td style="padding: 9px 8px; border-bottom: 1px solid #dee2e6; color: green; font-weight: 500; border-right: 1px solid #e9ecef;">Bonus</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px solid #dee2e6; color: green; font-weight: 500; border-right: 2px solid #dee2e6;">{rec['bonus']:,.2f}</td>
+                                    <td style="padding: 9px 8px; border-bottom: 1px solid #dee2e6; border-right: 1px solid #e9ecef; padding-left: 15px;"></td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px solid #dee2e6;"></td>
                                 </tr>
-                                <tr style="background-color: #F8F9FA; font-weight: bold; border-top: 1px solid #dee2e6;">
-                                    <td style="padding: 10px 8px; color: #1F4E78; font-size: 14px;">Net Payable Salary:</td>
-                                    <td style="padding: 10px 8px; text-align: right; color: #1F4E78; font-size: 15px; font-weight: 700;" colspan="3">Tk {net_final:,.2f}</td>
+                                <tr style="background-color: #F8F9FA; font-weight: bold; border-top: 2px solid #dee2e6;">
+                                    <td style="padding: 12px 8px; color: #1F4E78; font-size: 14px;" colspan="2">Net Payable Salary:</td>
+                                    <td style="padding: 12px 8px; text-align: right; color: #1F4E78; font-size: 15px; font-weight: 700;" colspan="2">Tk {net_final:,.2f}</td>
                                 </tr>
                             </tbody>
                         </table>
