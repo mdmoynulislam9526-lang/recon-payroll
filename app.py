@@ -166,12 +166,13 @@ with col2:
     if rows:
         months_list = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
         
-        # --- DYNAMIC YEAR SELECTION (LIFETIME FIX) ---
+        # --- DYNAMIC YEAR SELECTION (LIFETIME FIX ENHANCED) ---
         c_col1, c_col2 = st.columns(2)
         with c_col1: select_m = st.selectbox("Select Month", months_list, index=int(datetime.now().strftime("%m")) - 1)
         
         current_year = datetime.now().year
-        available_years = [str(y) for y in range(2023, current_year + 11)] 
+        # এখানে রেঞ্জ বাড়িয়ে চলতি বছরের ৫০ বছর পর পর্যন্ত করা হলো, যাতে কোনো লিমিটেশন না থাকে
+        available_years = [str(y) for y in range(2023, current_year + 51)] 
         current_year_str = str(current_year)
         default_index = available_years.index(current_year_str) if current_year_str in available_years else 0
             
