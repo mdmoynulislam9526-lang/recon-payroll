@@ -190,7 +190,7 @@ with col2:
     
     if rows:
 # --- মাস এবং বছর সিলেক্ট করার আপডেট করা লজিক ---
-if 'selected_month' not in st.session_state:
+    if 'selected_month' not in st.session_state:
     st.session_state.selected_month = datetime.now().strftime("%B") # এটি অবশ্যই এক ট্যাব ডানদিকে হবে
 
 months_list = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
