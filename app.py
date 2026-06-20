@@ -11,13 +11,9 @@ from calculations import calculate_salary_breakdown, generate_pdf_bytes
 
 st.set_page_config(page_title="RECON Payroll System", layout="wide", page_icon="💼")
 
-# --- DATABASE INITIALIZATION WITH ABSOLUTE PATH ---
-def get_db_path():
-    # এটি নিশ্চিত করবে যে ফাইলটি আপনার app.py এর ফোল্ডারেই তৈরি হবে
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "payroll_v5.db")
-
+# --- DATABASE INITIALIZATION ---
 def init_db():
-    conn = sqlite3.connect(get_db_path(), check_same_thread=False)
+    conn = sqlite3.connect("payroll_v5.db", check_same_thread=False)
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS employees_final_version (
@@ -38,8 +34,9 @@ def init_db():
 init_db()
 
 def get_db_connection():
-    return sqlite3.connect(get_db_path(), check_same_thread=False)
-# --- LOGO BASE64 CONVERSION ---
+    return sqlite3.connect("payroll_v5.db", check_same_thread=False)
+
+# --- LOGO & IMAGES ---
 logo_base64_str = ""
 current_dir = os.path.dirname(os.path.abspath(__file__))
 local_logo_path = os.path.join(current_dir, "logo.png")
@@ -47,42 +44,34 @@ if os.path.exists(local_logo_path):
     with open(local_logo_path, "rb") as img_file:
         logo_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- LIVE REPO SIGNATURE LOADING ---
 sig_base64_str = ""
 local_sig_path = os.path.join(current_dir, "signature.png")
 if os.path.exists(local_sig_path):
     with open(local_sig_path, "rb") as img_file:
         sig_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- LIVE REPO SEAL LOADING ---
 seal_base64_str = ""
 local_seal_path = os.path.join(current_dir, "seal.png")
 if os.path.exists(local_seal_path):
     with open(local_seal_path, "rb") as img_file:
         seal_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- MAIN TITLE ---
 st.title("💼 RECON LABORATORIES LTD - Advanced Payroll Management System")
 st.markdown("---")
 
 col1, col2 = st.columns([1, 2.3])
 
-# --- LEFT SIDE: ADD EMPLOYEE ---
 with col1:
     st.header("➕ Add New Person")
-    
     if "emp_id_val" not in st.session_state: st.session_state.emp_id_val = ""
     if "name_val" not in st.session_state: st.session_state.name_val = ""
     if "desg_val" not in st.session_state: st.session_state.desg_val = ""
     if "salary_val" not in st.session_state: st.session_state.salary_val = ""
 
     with st.form("employee_form", clear_on_submit=True):
-        input_id = st.text_input("ID (Numbers only, e.g., 101)", value=st.session_state.emp_id_val).strip()
+        input_id = st.text_input("ID (Numbers only)", value=st.session_state.emp_id_val).strip()
         name = st.text_input("Name", value=st.session_state.name_val)
-        department = st.selectbox("Select Department", [
-            "Production", "Quality Control", "Development",
-            "Maintenance", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"
-        ])
+        department = st.selectbox("Select Department", ["Production", "Quality Control", "Development", "Maintenance", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"])
         category = st.selectbox("Select Category", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"])
         designation = st.text_input("Designation", value=st.session_state.desg_val)
         salary = st.text_input("Gross Salary / Daily Wage Rate (Tk)", value=st.session_state.salary_val)
@@ -92,11 +81,10 @@ with col1:
             st.session_state.name_val = name
             st.session_state.desg_val = designation
             st.session_state.salary_val = salary
-            
             if not (input_id and name and designation and salary):
                 st.error("Please fill all fields!")
             elif not re.match(r"^[0-9]+$", input_id):
-                st.error("⚠️ Invalid ID Format! ID must only contain numbers.")
+                st.error("⚠️ Invalid ID Format!")
             else:
                 try:
                     conn = get_db_connection()
@@ -104,118 +92,61 @@ with col1:
                                    (input_id, name, designation, category, department, float(salary)))
                     conn.commit()
                     conn.close()
-                    st.success(f"{name} successfully added!")
-                    st.session_state.emp_id_val = ""
-                    st.session_state.name_val = ""
-                    st.session_state.desg_val = ""
-                    st.session_state.salary_val = ""
+                    st.success(f"{name} added!")
                     st.rerun()
                 except sqlite3.IntegrityError:
-                    st.error(f"⚠️ Warning: Employee ID '{input_id}' already exists!")
-                except ValueError: 
-                    st.error("Salary must be a number!")
+                    st.error("⚠️ ID already exists!")
 
-# --- REUSABLE FUNCTION FOR EDIT/DELETE ---
 def render_inline_management(r, prefix=""):
     eid, ename, edesg, ecat, edept, esalary = r
     with st.container():
         col_info, col_act1, col_act2 = st.columns([3, 0.6, 0.6])
         with col_info:
-            st.markdown(f"**[{eid}] {ename}** — {edesg} ({edept}) | Salary: Tk {esalary:,.2f}")
+            st.markdown(f"**[{eid}] {ename}** — {edesg} ({edept}) | Tk {esalary:,.2f}")
         with col_act1:
-            if st.button("Edit 📝", key=f"{prefix}_edit_{eid}", use_container_width=True):
-                st.session_state[f"emode_{prefix}_{eid}"] = True
+            if st.button("Edit 📝", key=f"{prefix}_edit_{eid}"): st.session_state[f"emode_{prefix}_{eid}"] = True
         with col_act2:
-            if st.button("Delete ❌", key=f"{prefix}_del_{eid}", use_container_width=True, type="secondary"):
+            if st.button("Delete ❌", key=f"{prefix}_del_{eid}", type="secondary"):
                 conn = get_db_connection()
                 conn.cursor().execute("DELETE FROM employees_final_version WHERE emp_id=?", (eid,))
                 conn.cursor().execute("DELETE FROM monthly_attendance_records WHERE emp_id=?", (eid,))
                 conn.commit()
                 conn.close()
-                st.success("Deleted!")
                 st.rerun()
-
         if st.session_state.get(f"emode_{prefix}_{eid}", False):
             with st.form(key=f"form_{prefix}_{eid}"):
-                ch_id = st.text_input("Edit Employee ID", value=eid).strip()
-                ch_name = st.text_input("Edit Name", value=ename)
-                dept_list = ["Production", "Quality Control", "Development", "Maintenance", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"]
-                ch_dept = st.selectbox("Edit Department", dept_list, index=dept_list.index(edept) if edept in dept_list else 0)
-                cat_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
-                ch_cat = st.selectbox("Edit Category", cat_list, index=cat_list.index(ecat) if ecat in cat_list else 0)
-                ch_desg = st.text_input("Edit Designation", value=edesg)
-                ch_salary = st.text_input("Edit Salary/Rate", value=str(esalary))
-                
-                b1, b2 = st.columns(2)
-                with b1:
-                    if st.form_submit_button("Save Changes", use_container_width=True):
-                        if not re.match(r"^[0-9]+$", ch_id):
-                            st.error("⚠️ ID must only contain numbers.")
-                        else:
-                            try:
-                                conn = get_db_connection()
-                                cursor = conn.cursor()
-                                
-                                if ch_id != eid:
-                                    exists = cursor.execute("SELECT 1 FROM employees_final_version WHERE emp_id=?", (ch_id,)).fetchone()
-                                    if exists:
-                                        st.error(f"⚠️ Employee ID '{ch_id}' already exists!")
-                                        conn.close()
-                                        return
-                                    
-                                    cursor.execute("INSERT INTO employees_final_version VALUES (?, ?, ?, ?, ?, ?)", (ch_id, ch_name, ch_desg, ch_cat, ch_dept, float(ch_salary)))
-                                    cursor.execute("UPDATE monthly_attendance_records SET emp_id=? WHERE emp_id=?", (ch_id, eid))
-                                    cursor.execute("DELETE FROM employees_final_version WHERE emp_id=?", (eid,))
-                                else:
-                                    cursor.execute("UPDATE employees_final_version SET name=?, designation=?, category=?, department=?, salary=? WHERE emp_id=?", (ch_name, ch_desg, ch_cat, ch_dept, float(ch_salary), eid))
-                                
-                                conn.commit()
-                                conn.close()
-                                st.session_state[f"emode_{prefix}_{eid}"] = False
-                                st.success("Updated Successfully!")
-                                st.rerun()
-                            except ValueError:
-                                st.error("Salary must be a number!")
-                with b2:
-                    if st.form_submit_button("Cancel", use_container_width=True):
-                        st.session_state[f"emode_{prefix}_{eid}"] = False
-                        st.rerun()
-        st.markdown("<hr style='margin:4px 0px; border-color:#eee;'>", unsafe_allow_html=True)
+                ch_name = st.text_input("Name", value=ename)
+                ch_salary = st.text_input("Salary", value=str(esalary))
+                if st.form_submit_button("Save"):
+                    conn = get_db_connection()
+                    conn.cursor().execute("UPDATE employees_final_version SET name=?, salary=? WHERE emp_id=?", (ch_name, float(ch_salary), eid))
+                    conn.commit()
+                    conn.close()
+                    st.session_state[f"emode_{prefix}_{eid}"] = False
+                    st.rerun()
 
-# --- RIGHT SIDE: PAYROLL MANAGEMENT ---
 with col2:
     conn = get_db_connection()
     rows = conn.cursor().execute("SELECT * FROM employees_final_version").fetchall()
     conn.close()
     
-        if rows:
-months_list = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-
-# সেশন স্টেটে মাসটি সেভ করার ব্যবস্থা
-    if 'selected_month' not in st.session_state:
-    st.session_state.selected_month = datetime.now().strftime("%B")
-
-c_col1, c_col2 = st.columns(2)
-
-with c_col1:
-    # ড্রপডাউনে সেশন স্টেটের মাসটি ডিফল্ট হিসেবে থাকবে
-    select_m = st.selectbox(
-        "Select Month", 
-        months_list, 
-        index=months_list.index(st.session_state.selected_month)
-    )
-    # মাস পরিবর্তন করলে সেশন স্টেট আপডেট হবে
-    st.session_state.selected_month = select_m
-
-current_year = datetime.now().year
-available_years = [str(y) for y in range(2023, current_year + 51)] 
-current_year_str = str(current_year)
-default_index = available_years.index(current_year_str) if current_year_str in available_years else 0
-    
-with c_col2:
-    select_y = st.selectbox("Select Year", available_years, index=default_index)
-
-full_month = f"{select_m}, {select_y}"
+    if rows:
+        # --- FIXED MONTH SELECTION ---
+        months_list = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+        if 'selected_month' not in st.session_state:
+            st.session_state.selected_month = datetime.now().strftime("%B")
+            
+        c_col1, c_col2 = st.columns(2)
+        with c_col1:
+            select_m = st.selectbox("Select Month", months_list, index=months_list.index(st.session_state.selected_month))
+            st.session_state.selected_month = select_m
+        
+        current_year = datetime.now().year
+        available_years = [str(y) for y in range(2023, current_year + 5)]
+        with c_col2:
+            select_y = st.selectbox("Select Year", available_years, index=available_years.index(str(current_year)))
+        
+        full_month = f"{select_m}, {select_y}"
         
         month_num = months_list.index(select_m) + 1
         days_in_month = calendar.monthrange(int(select_y), month_num)[1]
