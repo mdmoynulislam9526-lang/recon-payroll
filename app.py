@@ -189,19 +189,34 @@ with col2:
     conn.close()
     
     if rows:
-        months_list = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-        
-        c_col1, c_col2 = st.columns(2)
-        with c_col1: select_m = st.selectbox("Select Month", months_list, index=int(datetime.now().strftime("%m")) - 1)
-        
-        current_year = datetime.now().year
-        available_years = [str(y) for y in range(2023, current_year + 51)] 
-        current_year_str = str(current_year)
-        default_index = available_years.index(current_year_str) if current_year_str in available_years else 0
-            
-        with c_col2: select_y = st.selectbox("Select Year", available_years, index=default_index)
-        
-        full_month = f"{select_m}, {select_y}"
+# --- মাস এবং বছর সিলেক্ট করার আপডেট করা লজিক ---
+months_list = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
+# সেশন স্টেটে মাসটি সেভ করার ব্যবস্থা
+if 'selected_month' not in st.session_state:
+    st.session_state.selected_month = datetime.now().strftime("%B")
+
+c_col1, c_col2 = st.columns(2)
+
+with c_col1:
+    # ড্রপডাউনে সেশন স্টেটের মাসটি ডিফল্ট হিসেবে থাকবে
+    select_m = st.selectbox(
+        "Select Month", 
+        months_list, 
+        index=months_list.index(st.session_state.selected_month)
+    )
+    # মাস পরিবর্তন করলে সেশন স্টেট আপডেট হবে
+    st.session_state.selected_month = select_m
+
+current_year = datetime.now().year
+available_years = [str(y) for y in range(2023, current_year + 51)] 
+current_year_str = str(current_year)
+default_index = available_years.index(current_year_str) if current_year_str in available_years else 0
+    
+with c_col2:
+    select_y = st.selectbox("Select Year", available_years, index=default_index)
+
+full_month = f"{select_m}, {select_y}"
         
         month_num = months_list.index(select_m) + 1
         days_in_month = calendar.monthrange(int(select_y), month_num)[1]
