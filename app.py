@@ -11,9 +11,13 @@ from calculations import calculate_salary_breakdown, generate_pdf_bytes
 
 st.set_page_config(page_title="RECON Payroll System", layout="wide", page_icon="💼")
 
-# --- DATABASE INITIALIZATION ---
+# --- DATABASE INITIALIZATION WITH ABSOLUTE PATH ---
+def get_db_path():
+    # এটি নিশ্চিত করবে যে ফাইলটি আপনার app.py এর ফোল্ডারেই তৈরি হবে
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "payroll_v5.db")
+
 def init_db():
-    conn = sqlite3.connect("payroll_v5.db", check_same_thread=False)
+    conn = sqlite3.connect(get_db_path(), check_same_thread=False)
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS employees_final_version (
@@ -34,8 +38,7 @@ def init_db():
 init_db()
 
 def get_db_connection():
-    return sqlite3.connect("payroll_v5.db", check_same_thread=False)
-
+    return sqlite3.connect(get_db_path(), check_same_thread=False)
 # --- LOGO BASE64 CONVERSION ---
 logo_base64_str = ""
 current_dir = os.path.dirname(os.path.abspath(__file__))
