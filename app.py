@@ -11,8 +11,8 @@ from calculations import calculate_salary_breakdown, generate_pdf_bytes
 
 # --- SUPABASE CONFIGURATION ---
 # Ekhane apnar nijer URL ebong KEY bosan
-SUPABASE_URL = "qoelqzaodnxjfsmsyvhc"
-SUPABASE_KEY = "ap-southeast-1"
+SUPABASE_URL = "https://supabase.com/dashboard/project/qoelqzaodnxjfsmsyvhc/settings/general"
+SUPABASE_KEY = "sb_publishable_polNmuBnDGzfd91wFvCozw_eUJUtGrx"
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
