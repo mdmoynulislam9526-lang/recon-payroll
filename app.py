@@ -9,8 +9,8 @@ from calculations import calculate_salary_breakdown, generate_pdf_bytes
 
 # --- SUPABASE CONFIGURATION ---
 # আপনার প্রজেক্ট থেকে পাওয়া লিংক এবং কি (Key) এখানে দিন
-SUPABASE_URL = "আপনার_URL_এখানে"
-SUPABASE_KEY = "আপনার_KEY_এখানে"
+SUPABASE_URL = "https://supabase.com/dashboard/project/qoelqzaodnxjfsmsyvhc"
+SUPABASE_KEY = "sb_publishable_polNmuBnDGzfd91wFvCozw_eUJUtGrx"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # --- ডাটা লোড করার ফাংশন ---
