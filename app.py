@@ -11,7 +11,7 @@ from calculations import calculate_salary_breakdown, generate_pdf_bytes
 
 # --- SUPABASE CONFIGURATION ---
 SUPABASE_URL = "https://qoelqzaodnxjfsmsyvhc.supabase.co"
-SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY" # Ekhane apnar anon/public key-ti bosan
+SUPABASE_KEY = "sb_publishable_polNmuBnDGzfd91wFvCozw_eUJUtGrx" # Ekhane apnar anon/public key-ti bosan
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
