@@ -26,23 +26,11 @@ def get_attendance(month_year):
 # --- LOGO & IMAGES ---
 logo_base64_str = ""
 current_dir = os.path.dirname(os.path.abspath(__file__))
-local_logo_path = os.path.join(current_dir, "logo.png")
-if os.path.exists(local_logo_path):
-    with open(local_logo_path, "rb") as img_file:
+if os.path.exists(os.path.join(current_dir, "logo.png")):
+    with open(os.path.join(current_dir, "logo.png"), "rb") as img_file:
         logo_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
 
-sig_base64_str = ""
-local_sig_path = os.path.join(current_dir, "signature.png")
-if os.path.exists(local_sig_path):
-    with open(local_sig_path, "rb") as img_file:
-        sig_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
-
-seal_base64_str = ""
-local_seal_path = os.path.join(current_dir, "seal.png")
-if os.path.exists(local_seal_path):
-    with open(local_seal_path, "rb") as img_file:
-        seal_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
-      st.title("💼 RECON LABORATORIES LTD - Advanced Payroll Management System")
+st.title("💼 RECON LABORATORIES LTD - Advanced Payroll Management System")
 st.markdown("---")
 
 col1, col2 = st.columns([1, 2.3])
