@@ -31,6 +31,7 @@ def render_inline_management(r, prefix=""):
             
         if col_act2.button("Delete ❌", key=f"{prefix}_del_{eid}"):
             supabase.table("employees_final_version").delete().eq("emp_id", eid).execute()
+            supabase.table("monthly_attendance_records").delete().eq("emp_id", eid).execute()
             st.rerun()
 
         if st.session_state.get(f"emode_{prefix}_{eid}", False):
@@ -38,7 +39,7 @@ def render_inline_management(r, prefix=""):
                 col_a, col_b = st.columns(2)
                 new_id = col_a.text_input("ID", value=eid)
                 new_name = col_b.text_input("Name", value=ename)
-                new_dept = col_a.selectbox("Department", ["Production", "Quality Control", "Development", "Accounts & Finance"], index=["Production", "Quality Control", "Development", "Accounts & Finance"].index(edept))
+                new_dept = col_a.selectbox("Department", ["Production", "Quality Control", "Development", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"], index=["Production", "Quality Control", "Development", "Accounts & Finance", "HR & Admin", "Store & Inventory", "Sales & Marketing"].index(edept))
                 new_cat = col_b.selectbox("Category", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], index=["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"].index(ecat))
                 new_desg = col_a.text_input("Designation", value=edesg)
                 new_salary = col_b.number_input("Salary", value=float(esalary))
