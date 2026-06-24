@@ -172,47 +172,51 @@ with tab1:
             generate_pdf_bytes(pdf_emp_data, full_month, rec['absent'], rec['fine'], rec['present'], pdf_buf)
             st.download_button("📥 Download Pay Slip (PDF)", data=pdf_buf.getvalue(), file_name=f"PaySlip_{selected_id}.pdf", mime="application/pdf", use_container_width=True)                  
 with tab2:
-            view_cat = st.selectbox("Select Category to Process", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
-            filtered_rows = [r for r in rows if r['category'] == view_cat]
-            sheet_data = []
-            if filtered_rows:
-                with st.form("bulk_sheet_form_v5"):
-                    for r in filtered_rows:
-                        st.markdown(f"**🔹 {r['emp_id']} - {r['name']}**")
-                        rec = saved_db_tracker.get(str(r['emp_id']), {"present": days_in_month, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
-                        col_in1, col_in2, col_in3 = st.columns(3)
-                        with col_in1:
-                            a_d = st.number_input("Absent Days", 0, 31, int(rec['absent']), key=f"a_{r['emp_id']}")
-                            f_d = st.number_input("Fine (Tk)", 0.0, value=float(rec['fine']), key=f"f_{r['emp_id']}")
-                        with col_in2:
-                            ot_h = st.number_input("OT Hours", 0.0, 200.0, value=float(rec['ot_hrs']), key=f"oth_{r['emp_id']}")
-                            ot_r = st.number_input("OT Rate", 0.0, 1000.0, value=float(rec['ot_rate']), key=f"otr_{r['emp_id']}")
-                        with col_in3:
-                            bonus_amt = st.number_input("Bonus", 0.0, 200000.0, value=float(rec['bonus']), key=f"bn_{r['emp_id']}")
-                            adv_cut = st.number_input("Adv Cut", 0.0, 200000.0, value=float(rec['advance']), key=f"adv_{r['emp_id']}")
-                        sheet_data.append({'eid': r['emp_id'], 'p': days_in_month-a_d, 'a': a_d, 'f': f_d, 'oth': ot_h, 'otr': ot_r, 'bonus': bonus_amt, 'adv': adv_cut})
-                    
-if st.form_submit_button("💾 Save Entry to Database"):
-                    try:
-                        # ডাটাবেসে ডেটা পাঠানোর চেষ্টা করছি
-                        for item in sheet_data:
-                            # এখানে ভুল হওয়ার সম্ভাবনা সবচেয়ে বেশি, তাই আমরা try-except ব্যবহার করছি
-                            supabase.table("monthly_attendance_records").upsert({
-                                "month_year": str(full_month), 
-                                "emp_id": item['eid'], 
-                                "present": int(item['p']), 
-                                "absent": int(item['a']), 
-                                "fine": float(item['f']), 
-                                "ot_hrs": float(item['oth']), 
-                                "ot_rate": float(item['otr']), 
-                                "bonus": float(item['bonus']), 
-                                "advance": float(item['adv'])
-                            }).execute()
-                        st.success("সফলভাবে সেভ হয়েছে! 🎉")
-                        st.rerun()
-                    except Exception as e:
-                        # এই অংশটি ভুলটা ধরে স্ক্রিনে দেখাবে
-                        st.error(f"❌ ডাটাবেস এরর: {e}")
+    view_cat = st.selectbox("Select Category to Process", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
+    filtered_rows = [r for r in rows if r['category'] == view_cat]
+    
+    if filtered_rows:
+        # ফর্ম শুরু
+        with st.form("bulk_sheet_form_v5"):
+            sheet_data = [] # এটি ফর্মের ভেতরে থাকতে হবে
+            for r in filtered_rows:
+                st.markdown(f"**🔹 {r['emp_id']} - {r['name']}**")
+                rec = saved_db_tracker.get(str(r['emp_id']), {"present": days_in_month, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
+                
+                col_in1, col_in2, col_in3 = st.columns(3)
+                with col_in1:
+                    a_d = st.number_input("Absent Days", 0, 31, int(rec['absent']), key=f"a_{r['emp_id']}")
+                    f_d = st.number_input("Fine (Tk)", 0.0, value=float(rec['fine']), key=f"f_{r['emp_id']}")
+                with col_in2:
+                    ot_h = st.number_input("OT Hours", 0.0, 200.0, value=float(rec['ot_hrs']), key=f"oth_{r['emp_id']}")
+                    ot_r = st.number_input("OT Rate", 0.0, 1000.0, value=float(rec['ot_rate']), key=f"otr_{r['emp_id']}")
+                with col_in3:
+                    bonus_amt = st.number_input("Bonus", 0.0, 200000.0, value=float(rec['bonus']), key=f"bn_{r['emp_id']}")
+                    adv_cut = st.number_input("Adv Cut", 0.0, 200000.0, value=float(rec['advance']), key=f"adv_{r['emp_id']}")
+                
+                sheet_data.append({'eid': r['emp_id'], 'p': days_in_month-a_d, 'a': a_d, 'f': f_d, 'oth': ot_h, 'otr': ot_r, 'bonus': bonus_amt, 'adv': adv_cut})
+            
+            # সাবমিট বাটনটি অবশ্যই ফর্মের ভেতরে থাকতে হবে (এই ইন্ডেন্টেশনটি খেয়াল করুন)
+            submitted = st.form_submit_button("💾 Save Entry to Database")
+            
+            if submitted:
+                try:
+                    for item in sheet_data:
+                        supabase.table("monthly_attendance_records").upsert({
+                            "month_year": str(full_month), 
+                            "emp_id": int(item['eid']), 
+                            "present": int(item['p']), 
+                            "absent": int(item['a']), 
+                            "fine": float(item['f']), 
+                            "ot_hrs": float(item['oth']), 
+                            "ot_rate": float(item['otr']), 
+                            "bonus": float(item['bonus']), 
+                            "advance": float(item['adv'])
+                        }).execute()
+                    st.success("সফলভাবে সেভ হয়েছে! 🎉")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ ডাটাবেস এরর: {e}")
 with tab3:
             # --- MAIN SUMMARY SHEET WITH MATCHING ALIGNMENT ---
             print_html = f"""
