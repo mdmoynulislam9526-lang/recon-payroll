@@ -157,7 +157,7 @@ with tab1:
         rec['present_days'], 
         rec['advance_cut']
     )
-        total_ot_emp = rec['ot_hrs'] * rec['ot_rate']
+total_ot_emp = rec['overtime_hours'] * rec['overtime_rate']
         net_final = net_p + total_ot_emp + rec['bonus']
 
             # সেই আগের সিগনেচার লজিক
