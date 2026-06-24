@@ -126,9 +126,11 @@ with col2:
                 for emp in search_results: render_inline_management(emp, prefix="search_tab")
 with tab1:
             st.subheader("📄 Employee Pay Slip Preview")
-            # এমপ্লয়ি নির্বাচন
-selected_id = selected_emp_id.split(" - ")[0]
-    selected_emp = next(r for r in rows if str(r['emp_id']) == selected_id)
+    selected_emp_id = st.selectbox("Select Employee", ...)
+    selected_id = selected_emp_id.split(" - ")[0]
+    
+    # ১৩১ নম্বর লাইনটি এভাবে লিখুন (শুরুতে অতিরিক্ত স্পেস রাখবেন না)
+selected_emp = next(r for r in rows if str(r['emp_id']) == selected_id)
     # সঠিক ইন্ডেন্টেশন (লাইনটি আগের লাইনের সাথে অ্যালাইন করুন)
     rec = saved_db_tracker.get(str(selected_id), {
         "present_days": 26, 
