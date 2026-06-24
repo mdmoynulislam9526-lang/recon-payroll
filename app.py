@@ -192,8 +192,13 @@ st.components.v1.html(payslip_preview_html, height=560, scrolling=True)
             # PDF Download
 pdf_emp_data = (selected_emp['emp_id'], selected_emp['name'], selected_emp['designation'], selected_emp['category'], selected_emp['department'], house_rent, medical, adv_paid, net_final)
 pdf_buf = BytesIO()
-        generate_pdf_bytes(pdf_emp_data, full_month, rec['absent_days'], rec['fine_amount'], rec['present_days'], pdf_buf
-st.download_button("📥 Download Pay Slip (PDF)", data=pdf_buf.getvalue(), file_name=f"PaySlip_{selected_id}.pdf", mime="application/pdf", use_container_width=True)                  
+generate_pdf_bytes(pdf_emp_data, full_month, rec['absent_days'], rec['fine_amount'], rec['present_days'], pdf_buf)
+st.download_button(
+        label="📥 Download Pay Slip",
+        data=pdf_buf.getvalue(),
+        file_name=f"Pay_Slip_{selected_emp['name']}_{full_month}.pdf",
+        mime="application/pdf"
+    )                
 with tab2:
     view_cat = st.selectbox("Select Category to Process", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
     filtered_rows = [r for r in rows if r['category'] == view_cat]
