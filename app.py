@@ -161,8 +161,8 @@ total_ot_emp = rec['overtime_hours'] * rec['overtime_rate']
 net_final = net_p + total_ot_emp + rec['bonus_amount']
 
             # সেই আগের সিগনেচার লজিক
-              sig_html_element = f"<img src='data:image/png;base64,{sig_base64_str}' style='width: 150px;'>" if sig_base64_str else "____________________"
-
+sig_html_element = f"<img src='data:image/png;base64,{sig_base64_str}' style='width: 150px;'>" if sig_base64_str else "____________________"
+    st.markdown(sig_html_element, unsafe_allow_html=True)
             # Pay Slip HTML Design
             payslip_preview_html = f"""
             <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 35px; background: white; color: black; border: 1px solid #c8d6e5; border-radius: 8px; max-width: 700px; margin: 15px auto; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
