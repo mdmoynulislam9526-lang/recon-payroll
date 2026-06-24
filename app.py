@@ -203,16 +203,16 @@ with tab2:
                 try:
                     for item in sheet_data:
                         supabase.table("monthly_attendance_records").upsert({
-                            "month_year": str(full_month), 
-                            "emp_id": int(item['eid']), 
-                            "present": int(item['p']), 
-                            "absent": int(item['a']), 
-                            "fine": float(item['f']), 
-                            "ot_hrs": float(item['oth']), 
-                            "ot_rate": float(item['otr']), 
-                            "bonus": float(item['bonus']), 
-                            "advance": float(item['adv'])
-                        }).execute()
+                          "month_year": str(full_month), 
+                          "emp_id": int(item['eid']), 
+                          "present_days": int(item['p']),      # 'present' এর বদলে 'present_days'
+                          "absent_days": int(item['a']),       # 'absent' এর বদলে 'absent_days'
+                          "fine_amount": float(item['f']),     # 'fine' এর বদলে 'fine_amount'
+                          "overtime_hours": float(item['oth']),# 'ot_hrs' এর বদলে 'overtime_hours'
+                          "overtime_rate": float(item['otr']), # 'ot_rate' এর বদলে 'overtime_rate'
+                          "bonus_amount": float(item['bonus']),# 'bonus' এর বদলে 'bonus_amount'
+                          "advance_cut": float(item['adv'])    # 'advance' এর বদলে 'advance_cut'
+                       }).execute()
                     st.success("সফলভাবে সেভ হয়েছে! 🎉")
                     st.rerun()
                 except Exception as e:
