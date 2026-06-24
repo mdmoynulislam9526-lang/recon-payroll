@@ -314,7 +314,7 @@ gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakd
 ot_total = rec['overtime_hours'] * rec['overtime_rate']
 final_payable = net_p + ot_total + rec['bonus_amount']
 
-                    print_html += f"""
+print_html += f"""
                             <tr style="text-align: center; background-color: white; border-bottom: 1px solid #efefef;">
                                 <td style="border: 1px solid #e9ecef; padding: 8px; font-weight: 700; color: #333;">{str(eid)}</td>
                                 <td style="border: 1px solid #e9ecef; padding: 8px; text-align: left; font-weight: 700; color: #1F4E78;">{name}</td>
