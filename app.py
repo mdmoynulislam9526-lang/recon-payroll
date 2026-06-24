@@ -158,7 +158,7 @@ with tab1:
         rec['advance_cut']
     )
 total_ot_emp = rec['overtime_hours'] * rec['overtime_rate']
-        net_final = net_p + total_ot_emp + rec['bonus']
+net_final = net_p + total_ot_emp + rec['bonus_amount']
 
             # সেই আগের সিগনেচার লজিক
             sig_html_element = f"<img src='data:image/png;base64,{sig_base64_str}' style='width: 150px;'>" if sig_base64_str else "____________________"
