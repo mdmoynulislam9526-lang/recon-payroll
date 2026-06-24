@@ -107,67 +107,50 @@ with col2:
         db_records = att_response.data
         saved_db_tracker = {str(r['emp_id']): r for r in db_records}
 
-        # --- TABS ---
-        tab_emp, tab0, tab1, tab2, tab3, tab4 = st.tabs(["👥 All Employees", "🔍 Search", "📄 Pay Slip", "📊 Attendance & Processor", "📑 Summary Sheet", "📈 Dashboard Summary"])
-        
-        with tab_emp:
-            categories_map = {"💼 Managers": "Manager", "👔 Officers": "Officer", "🛠️ Workers (Permanent)": "Worker (Permanent)", "📆 Workers (Daily Basis)": "Worker (Daily Basis)"}
-            for title, cat_value in categories_map.items():
-                cat_members = [r for r in rows if r['category'] == cat_value]
-                with st.expander(f"{title} ({len(cat_members)})", expanded=False):
-                    if not cat_members: st.info("No records.")
-                    else:
-                        for r in cat_members: render_inline_management(r, prefix="all_tab")
-
-        with tab0:
-            search_query = st.text_input("Enter Employee ID or Name to search", placeholder="Type here...", key="search_tab_input")
-            if search_query:
-                search_results = [r for r in rows if search_query.lower() in str(r['emp_id']).lower() or search_query.lower() in r['name'].lower()]
-                for emp in search_results: render_inline_management(emp, prefix="search_tab")
 with tab1:
-    st.subheader("📄 Employee Pay Slip Preview")
-    
-    # এমপ্লয়ি সিলেকশন
-    emp_options = [f"{r['emp_id']} - {r['name']}" for r in rows]
-    selected_emp_id = st.selectbox("Select Employee", emp_options, key="ps_select")
-    
-    # আইডি আলাদা করা
-    selected_id = selected_emp_id.split(" - ")[0]
-    
-    # এমপ্লয়ি ডাটা খোঁজা
-    selected_emp = next(r for r in rows if str(r['emp_id']) == selected_id)
-    
-    # ডাটাবেস থেকে ট্র্যাকার ডাটা নেয়া (কলামের নামগুলো ডাটাবেস অনুযায়ী)
-    rec = saved_db_tracker.get(str(selected_id), {
-        "present_days": 26, 
-        "absent_days": 0, 
-        "fine_amount": 0.0, 
-        "overtime_hours": 0.0, 
-        "overtime_rate": 0.0, 
-        "bonus_amount": 0.0, 
-        "advance_cut": 0.0
-    })
-    
-    # স্যালারি ক্যালকুলেশন ফাংশন কল
-    gross, house_rent, medical, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(
-        selected_emp['salary'], 
-        rec['absent_days'], 
-        rec['fine_amount'], 
-        selected_emp['category'], 
-        rec['present_days'], 
-        rec['advance_cut']
-    )
-total_ot_emp = rec['overtime_hours'] * rec['overtime_rate']
-net_final = net_p + total_ot_emp + rec['bonus_amount']
-
-            # সেই আগের সিগনেচার লজিক
-sig_html_element = f"<img src='data:image/png;base64,{sig_base64_str}' style='width: 150px;'>" if sig_base64_str else "____________________"
-st.markdown(sig_html_element, unsafe_allow_html=True)
-            # Pay Slip HTML Design
-payslip_preview_html = f"""
+            st.subheader("📄 Employee Pay Slip Preview")
+            
+            # এমপ্লয়ি সিলেকশন
+            emp_options = [f"{r['emp_id']} - {r['name']}" for r in rows]
+            selected_emp_id = st.selectbox("Select Employee", emp_options, key="ps_select")
+            
+            # আইডি আলাদা করা
+            selected_id = selected_emp_id.split(" - ")[0]
+            
+            # এমপ্লয়ি ডাটা খোঁজা
+            selected_emp = next(r for r in rows if str(r['emp_id']) == selected_id)
+            
+            # ডাটাবেস থেকে ট্র্যাকার ডাটা নেয়া
+            rec = saved_db_tracker.get(str(selected_id), {
+                "present_days": 26, 
+                "absent_days": 0, 
+                "fine_amount": 0.0, 
+                "overtime_hours": 0.0, 
+                "overtime_rate": 0.0, 
+                "bonus_amount": 0.0, 
+                "advance_cut": 0.0
+            })
+            
+            # স্যালারি ক্যালকুলেশন
+            gross, house_rent, medical, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(
+                selected_emp['salary'], 
+                rec['absent_days'], 
+                rec['fine_amount'], 
+                selected_emp['category'], 
+                rec['present_days'], 
+                rec['advance_cut']
+            )
+            total_ot_emp = rec['overtime_hours'] * rec['overtime_rate']
+            net_final = net_p + total_ot_emp + rec['bonus_amount']
+            
+            # সিগনেচার লজিক
+            sig_html_element = f"<img src='data:image/png;base64,{sig_base64_str}' style='width: 150px;'>" if 'sig_base64_str' in locals() and sig_base64_str else "____________________"
+            
+            # Pay Slip HTML Design (সংশোধিত টেবিল অংশ)
+            payslip_preview_html = f"""
             <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 35px; background: white; color: black; border: 1px solid #c8d6e5; border-radius: 8px; max-width: 700px; margin: 15px auto; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
                 <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #1F4E78;">
-                    {"<img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 65px;'>" if logo_base64_str else ""}
+                    {"<img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 65px;'>" if 'logo_base64_str' in locals() and logo_base64_str else ""}
                 </div>
                 <div style="text-align: center; font-weight: 700; color: #1F4E78; margin-bottom: 20px;">EMPLOYEE PAY SLIP - {full_month}</div>
                 
@@ -179,26 +162,26 @@ payslip_preview_html = f"""
                 <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
                     <tr style="background-color: #f8fafc;"><th>Earnings</th><th>Amount</th><th>Deductions</th><th>Amount</th></tr>
                     <tr><td>Base Pay</td><td>{selected_emp['salary']:,.2f}</td><td>Absent Cut</td><td>{absent_cut:,.2f}</td></tr>
-                   f"<tr><td>OT Earned</td><td>{total_ot_emp:,.2f}</td><td>Fine</td><td>{rec['fine_amount']:,.2f}</td></tr>"
-                    st.markdown(f"<tr><td>Bonus</td><td>{rec['bonus_amount']:,.2f}</td><td>Advance</td><td>{adv_paid:,.2f}</td></tr>", unsafe_allow_html=True)
+                    <tr><td>OT Earned</td><td>{total_ot_emp:,.2f}</td><td>Fine</td><td>{rec['fine_amount']:,.2f}</td></tr>
+                    <tr><td>Bonus</td><td>{rec['bonus_amount']:,.2f}</td><td>Advance</td><td>{adv_paid:,.2f}</td></tr>
                     <tr style="border-top: 2px solid #1F4E78; font-weight: bold;"><td>Net Payable</td><td>Tk {net_final:,.2f}</td><td></td><td></td></tr>
                 </table>
 
                 <div style="margin-top: 40px; text-align: right;">{sig_html_element}<br>Authorized Signature</div>
             </div>
             """
-st.components.v1.html(payslip_preview_html, height=560, scrolling=True)
-
-            # PDF Download
-pdf_emp_data = (selected_emp['emp_id'], selected_emp['name'], selected_emp['designation'], selected_emp['category'], selected_emp['department'], house_rent, medical, adv_paid, net_final)
-pdf_buf = BytesIO()
-generate_pdf_bytes(pdf_emp_data, full_month, rec['absent_days'], rec['fine_amount'], rec['present_days'], pdf_buf)
-st.download_button(
-        label="📥 Download Pay Slip",
-        data=pdf_buf.getvalue(),
-        file_name=f"Pay_Slip_{selected_emp['name']}_{full_month}.pdf",
-        mime="application/pdf"
-    )                
+            st.components.v1.html(payslip_preview_html, height=560, scrolling=True)
+            
+            # PDF Download Button
+            pdf_emp_data = (selected_emp['emp_id'], selected_emp['name'], selected_emp['designation'], selected_emp['category'], selected_emp['department'], house_rent, medical, adv_paid, net_final)
+            pdf_buf = BytesIO()
+            generate_pdf_bytes(pdf_emp_data, full_month, rec['absent_days'], rec['fine_amount'], rec['present_days'], pdf_buf)
+            st.download_button(
+                label="📥 Download Pay Slip",
+                data=pdf_buf.getvalue(),
+                file_name=f"Pay_Slip_{selected_emp['name']}_{full_month}.pdf",
+                mime="application/pdf"
+            )                
 with tab2:
     view_cat = st.selectbox("Select Category to Process", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
     filtered_rows = [r for r in rows if r['category'] == view_cat]
