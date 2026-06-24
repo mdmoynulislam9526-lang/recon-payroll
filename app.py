@@ -133,13 +133,13 @@ with tab1:
             
             # ডেটা ফেচিং
            rec = saved_db_tracker.get(str(selected_id), {
-    "present_days": 26, 
-    "absent_days": 0, 
-    "fine_amount": 0.0, 
-    "overtime_hours": 0.0, 
-    "overtime_rate": 0.0, 
-    "bonus_amount": 0.0, 
-    "advance_cut": 0.0
+               "present_days": 26, 
+               "absent_days": 0, 
+               "fine_amount": 0.0, 
+               "overtime_hours": 0.0, 
+               "overtime_rate": 0.0, 
+               "bonus_amount": 0.0, 
+               "advance_cut": 0.0
 })
             gross, house_rent, medical, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(
     selected_emp['salary'], 
