@@ -106,6 +106,24 @@ with col2:
         att_response = supabase.table("monthly_attendance_records").select("*").eq("month_year", full_month).execute()
         db_records = att_response.data
         saved_db_tracker = {str(r['emp_id']): r for r in db_records}
+# --- TABS ---
+        tab_emp, tab0, tab1, tab2, tab3, tab4 = st.tabs(["👥 All Employees", "🔍 Search", "📄 Pay Slip", "📊 Attendance & Processor", "📑 Summary Sheet", "📈 Dashboard Summary"])
+        
+        with tab_emp:
+            categories_map = {"💼 Managers": "Manager", "👔 Officers": "Officer", "🛠️ Workers (Permanent)": "Worker (Permanent)", "📆 Workers (Daily Basis)": "Worker (Daily Basis)"}
+            for title, cat_value in categories_map.items():
+                cat_members = [r for r in rows if r['category'] == cat_value]
+                with st.expander(f"{title} ({len(cat_members)})", expanded=False):
+                    if not cat_members: st.info("No records.")
+                    else:
+                        for r in cat_members: render_inline_management(r, prefix="all_tab")
+
+        with tab0:
+            st.subheader("🔍 Search Employee")
+            search_query = st.text_input("Enter Employee ID or Name to search", placeholder="Type here...", key="search_tab_input")
+            if search_query:
+                search_results = [r for r in rows if search_query.lower() in str(r['emp_id']).lower() or search_query.lower() in r['name'].lower()]
+                for emp in search_results: render_inline_management(emp, prefix="search_tab")       
 
 with tab1:
             st.subheader("📄 Employee Pay Slip Preview")
