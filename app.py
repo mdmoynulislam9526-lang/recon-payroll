@@ -132,8 +132,23 @@ with tab1:
             selected_emp = next(r for r in rows if str(r['emp_id']) == selected_id)
             
             # ডেটা ফেচিং
-            rec = saved_db_tracker.get(str(selected_id), {"present": 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
-            gross, house_rent, medical, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(selected_emp['salary'], rec['absent'], rec['fine'], selected_emp['category'], rec['present'], rec['advance'])
+           rec = saved_db_tracker.get(str(selected_id), {
+    "present_days": 26, 
+    "absent_days": 0, 
+    "fine_amount": 0.0, 
+    "overtime_hours": 0.0, 
+    "overtime_rate": 0.0, 
+    "bonus_amount": 0.0, 
+    "advance_cut": 0.0
+})
+            gross, house_rent, medical, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(
+    selected_emp['salary'], 
+    rec['absent_days'],   # 'absent' এর বদলে 'absent_days'
+    rec['fine_amount'],   # 'fine' এর বদলে 'fine_amount'
+    selected_emp['category'], 
+    rec['present_days'],  # 'present' এর বদলে 'present_days'
+    rec['advance_cut']    # 'advance' এর বদলে 'advance_cut'
+)
             total_ot_emp = rec['ot_hrs'] * rec['ot_rate']
             net_final = net_p + total_ot_emp + rec['bonus']
 
