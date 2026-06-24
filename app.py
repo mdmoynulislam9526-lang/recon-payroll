@@ -192,11 +192,27 @@ with tab2:
                             adv_cut = st.number_input("Adv Cut", 0.0, 200000.0, value=float(rec['advance']), key=f"adv_{r['emp_id']}")
                         sheet_data.append({'eid': r['emp_id'], 'p': days_in_month-a_d, 'a': a_d, 'f': f_d, 'oth': ot_h, 'otr': ot_r, 'bonus': bonus_amt, 'adv': adv_cut})
                     
-                    if st.form_submit_button("💾 Save Entry to Database"):
+if st.form_submit_button("💾 Save Entry to Database"):
+                    try:
+                        # ডাটাবেসে ডেটা পাঠানোর চেষ্টা করছি
                         for item in sheet_data:
-                            supabase.table("monthly_attendance_records").upsert({"month_year": full_month, "emp_id": item['eid'], "present": item['p'], "absent": item['a'], "fine": item['f'], "ot_hrs": item['oth'], "ot_rate": item['otr'], "bonus": item['bonus'], "advance": item['adv']}).execute()
-                        st.success("Saved!")
+                            # এখানে ভুল হওয়ার সম্ভাবনা সবচেয়ে বেশি, তাই আমরা try-except ব্যবহার করছি
+                            supabase.table("monthly_attendance_records").upsert({
+                                "month_year": str(full_month), 
+                                "emp_id": item['eid'], 
+                                "present": int(item['p']), 
+                                "absent": int(item['a']), 
+                                "fine": float(item['f']), 
+                                "ot_hrs": float(item['oth']), 
+                                "ot_rate": float(item['otr']), 
+                                "bonus": float(item['bonus']), 
+                                "advance": float(item['adv'])
+                            }).execute()
+                        st.success("সফলভাবে সেভ হয়েছে! 🎉")
                         st.rerun()
+                    except Exception as e:
+                        # এই অংশটি ভুলটা ধরে স্ক্রিনে দেখাবে
+                        st.error(f"❌ ডাটাবেস এরর: {e}")
 with tab3:
             # --- MAIN SUMMARY SHEET WITH MATCHING ALIGNMENT ---
             print_html = f"""
