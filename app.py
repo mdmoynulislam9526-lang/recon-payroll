@@ -275,7 +275,7 @@ with tab3:
                          </tr>
                          """
 # --- NEW TAB: DASHBOARD SUMMARY ---
-        with tab4:
+with tab4:
             st.subheader("📈 Dashboard Summary")
             total_employees = len(rows)
             total_salary_budget = sum([r['salary'] for r in rows])
