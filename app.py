@@ -172,7 +172,7 @@ with tab1:
             pdf_buf = BytesIO()
             generate_pdf_bytes(pdf_emp_data, full_month, rec['absent'], rec['fine'], rec['present'], pdf_buf)
             st.download_button("📥 Download Pay Slip (PDF)", data=pdf_buf.getvalue(), file_name=f"PaySlip_{selected_id}.pdf", mime="application/pdf", use_container_width=True)
-        with tab2:
+with tab2:
             view_cat = st.selectbox("Select Category to Process", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
             filtered_rows = [r for r in rows if r['category'] == view_cat]
             sheet_data = []
