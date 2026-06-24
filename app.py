@@ -180,7 +180,7 @@ payslip_preview_html = f"""
                     <tr style="background-color: #f8fafc;"><th>Earnings</th><th>Amount</th><th>Deductions</th><th>Amount</th></tr>
                     <tr><td>Base Pay</td><td>{selected_emp['salary']:,.2f}</td><td>Absent Cut</td><td>{absent_cut:,.2f}</td></tr>
                    f"<tr><td>OT Earned</td><td>{total_ot_emp:,.2f}</td><td>Fine</td><td>{rec['fine_amount']:,.2f}</td></tr>"
-                    <tr><td>Bonus</td><td>{rec['bonus']:,.2f}</td><td>Advance</td><td>{adv_paid:,.2f}</td></tr>
+                    st.markdown(f"<tr><td>Bonus</td><td>{rec['bonus_amount']:,.2f}</td><td>Advance</td><td>{adv_paid:,.2f}</td></tr>", unsafe_allow_html=True)
                     <tr style="border-top: 2px solid #1F4E78; font-weight: bold;"><td>Net Payable</td><td>Tk {net_final:,.2f}</td><td></td><td></td></tr>
                 </table>
 
