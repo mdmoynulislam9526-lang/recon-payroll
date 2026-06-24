@@ -127,20 +127,18 @@ with col2:
 with tab1:
             st.subheader("📄 Employee Pay Slip Preview")
             # এমপ্লয়ি নির্বাচন
-            selected_emp_id = st.selectbox("Select Employee", [f"{r['emp_id']} - {r['name']}" for r in rows], key="ps_select")
-            selected_id = selected_emp_id.split(" - ")[0]
-            selected_emp = next(r for r in rows if str(r['emp_id']) == selected_id)
-            
-            # ডেটা ফেচিং
-           rec = saved_db_tracker.get(str(selected_id), {
-               "present_days": 26, 
-               "absent_days": 0, 
-               "fine_amount": 0.0, 
-               "overtime_hours": 0.0, 
-               "overtime_rate": 0.0, 
-               "bonus_amount": 0.0, 
-               "advance_cut": 0.0
-})
+selected_id = selected_emp_id.split(" - ")[0]
+    selected_emp = next(r for r in rows if str(r['emp_id']) == selected_id)
+    # সঠিক ইন্ডেন্টেশন (লাইনটি আগের লাইনের সাথে অ্যালাইন করুন)
+    rec = saved_db_tracker.get(str(selected_id), {
+        "present_days": 26, 
+        "absent_days": 0, 
+        "fine_amount": 0.0, 
+        "overtime_hours": 0.0, 
+        "overtime_rate": 0.0, 
+        "bonus_amount": 0.0, 
+        "advance_cut": 0.0
+    })
             gross, house_rent, medical, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(
     selected_emp['salary'], 
     rec['absent_days'],   # 'absent' এর বদলে 'absent_days'
