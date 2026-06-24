@@ -125,13 +125,19 @@ with col2:
                 search_results = [r for r in rows if search_query.lower() in str(r['emp_id']).lower() or search_query.lower() in r['name'].lower()]
                 for emp in search_results: render_inline_management(emp, prefix="search_tab")
 with tab1:
-            st.subheader("📄 Employee Pay Slip Preview")
-            selected_emp_id = st.selectbox("Select Employee", ...)
-            selected_id = selected_emp_id.split(" - ")[0]
+    st.subheader("📄 Employee Pay Slip Preview")
     
-    # ১৩১ নম্বর লাইনটি এভাবে লিখুন (শুরুতে অতিরিক্ত স্পেস রাখবেন না)
-selected_emp = next(r for r in rows if str(r['emp_id']) == selected_id)
-    # সঠিক ইন্ডেন্টেশন (লাইনটি আগের লাইনের সাথে অ্যালাইন করুন)
+    # এমপ্লয়ি সিলেকশন
+    emp_options = [f"{r['emp_id']} - {r['name']}" for r in rows]
+    selected_emp_id = st.selectbox("Select Employee", emp_options, key="ps_select")
+    
+    # আইডি আলাদা করা
+    selected_id = selected_emp_id.split(" - ")[0]
+    
+    # এমপ্লয়ি ডাটা খোঁজা
+    selected_emp = next(r for r in rows if str(r['emp_id']) == selected_id)
+    
+    # ডাটাবেস থেকে ট্র্যাকার ডাটা নেয়া (কলামের নামগুলো ডাটাবেস অনুযায়ী)
     rec = saved_db_tracker.get(str(selected_id), {
         "present_days": 26, 
         "absent_days": 0, 
@@ -141,14 +147,16 @@ selected_emp = next(r for r in rows if str(r['emp_id']) == selected_id)
         "bonus_amount": 0.0, 
         "advance_cut": 0.0
     })
-            gross, house_rent, medical, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(
-    selected_emp['salary'], 
-    rec['absent_days'],   # 'absent' এর বদলে 'absent_days'
-    rec['fine_amount'],   # 'fine' এর বদলে 'fine_amount'
-    selected_emp['category'], 
-    rec['present_days'],  # 'present' এর বদলে 'present_days'
-    rec['advance_cut']    # 'advance' এর বদলে 'advance_cut'
-)
+    
+    # স্যালারি ক্যালকুলেশন ফাংশন কল
+    gross, house_rent, medical, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(
+        selected_emp['salary'], 
+        rec['absent_days'], 
+        rec['fine_amount'], 
+        selected_emp['category'], 
+        rec['present_days'], 
+        rec['advance_cut']
+    )
             total_ot_emp = rec['ot_hrs'] * rec['ot_rate']
             net_final = net_p + total_ot_emp + rec['bonus']
 
