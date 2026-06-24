@@ -25,7 +25,7 @@ if os.path.exists(local_logo_path):
     with open(local_logo_path, "rb") as img_file:
         logo_base64_str = base64.b64encode(img_file.read()).decode('utf-8')
 
-sig_base64_str = "" # সিগনেচার ইমেজ স্ট্রিং (প্রয়োজনে এখানে আপডেট করুন)
+sig_base64_str = "" 
 sig_html_element = f"<img src='data:image/png;base64,{sig_base64_str}' style='width: 150px;'>" if sig_base64_str else "____________________"
 
 st.title("💼 RECON LABORATORIES LTD - Advanced Payroll Management System")
@@ -33,7 +33,7 @@ st.markdown("---")
 
 col1, col2 = st.columns([1, 2.3])
 
-# --- SIDE PANEL (Add New Person) ---
+# --- SIDE PANEL ---
 with col1:
     st.header("➕ Add New Person")
     with st.form("employee_form", clear_on_submit=True):
@@ -107,8 +107,8 @@ with col2:
         db_records = att_response.data
         saved_db_tracker = {str(r['emp_id']): r for r in db_records}
 
-# --- TABS ---
-        tab_emp, tab0, tab1, tab2, tab3 = st.tabs(["👥 All Employees", "🔍 Search", "📄 Pay Slip", "📊 Attendance & Processor", "📑 Summary Sheet"])
+        # --- TABS ---
+        tab_emp, tab0, tab1, tab2, tab3, tab4 = st.tabs(["👥 All Employees", "🔍 Search", "📄 Pay Slip", "📊 Attendance & Processor", "📑 Summary Sheet", "📈 Dashboard Summary"])
         
         with tab_emp:
             categories_map = {"💼 Managers": "Manager", "👔 Officers": "Officer", "🛠️ Workers (Permanent)": "Worker (Permanent)", "📆 Workers (Daily Basis)": "Worker (Daily Basis)"}
@@ -124,7 +124,6 @@ with col2:
             if search_query:
                 search_results = [r for r in rows if search_query.lower() in str(r['emp_id']).lower() or search_query.lower() in r['name'].lower()]
                 for emp in search_results: render_inline_management(emp, prefix="search_tab")
-
 with tab1:
             st.subheader("📄 Employee Pay Slip Preview")
             # এমপ্লয়ি নির্বাচন
@@ -171,7 +170,7 @@ with tab1:
             pdf_emp_data = (selected_emp['emp_id'], selected_emp['name'], selected_emp['designation'], selected_emp['category'], selected_emp['department'], house_rent, medical, adv_paid, net_final)
             pdf_buf = BytesIO()
             generate_pdf_bytes(pdf_emp_data, full_month, rec['absent'], rec['fine'], rec['present'], pdf_buf)
-            st.download_button("📥 Download Pay Slip (PDF)", data=pdf_buf.getvalue(), file_name=f"PaySlip_{selected_id}.pdf", mime="application/pdf", use_container_width=True)
+            st.download_button("📥 Download Pay Slip (PDF)", data=pdf_buf.getvalue(), file_name=f"PaySlip_{selected_id}.pdf", mime="application/pdf", use_container_width=True)                  
 with tab2:
             view_cat = st.selectbox("Select Category to Process", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
             filtered_rows = [r for r in rows if r['category'] == view_cat]
@@ -273,11 +272,26 @@ with tab3:
                                 <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #1e7e34; font-weight: 500;">{rec['bonus']:,.2f}</td>
                                 <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #c00; font-weight: 500;">{adv_paid:,.2f}</td>
                                 <td style="border: 1px solid #dee2e6; padding: 8px; text-align: right; font-weight: 700; color: #1F4E78; background-color: #f8f9fa; font-size: 13px;">{final_payable:,.2f}</td>
-                            </tr>
-                    """
+                         </tr>
+                         """
+# --- NEW TAB: DASHBOARD SUMMARY ---
+        with tab4:
+            st.subheader("📈 Dashboard Summary")
+            total_employees = len(rows)
+            total_salary_budget = sum([r['salary'] for r in rows])
+            
+            col_stat1, col_stat2 = st.columns(2)
+            col_stat1.metric("Total Employees", total_employees)
+            col_stat2.metric("Total Base Salary Budget", f"Tk {total_salary_budget:,.2f}")
+            
+            df_rows = pd.DataFrame(rows)
+            if not df_rows.empty:
+                cat_summary = df_rows.groupby('category')['salary'].agg(['count', 'sum']).reset_index()
+                cat_summary.columns = ['Category', 'Employee Count', 'Total Salary']
+                st.table(cat_summary)
+                st.bar_chart(cat_summary.set_index('Category')['Total Salary'])
                 print_html += "</tbody></table></div>"
             print_html += "</div>"
-
             if has_any_data:
                 st.components.v1.html(print_html, height=600, scrolling=True)
                 if st.button("🖨️ CLICK HERE TO PRINT THIS FULL SHEET", use_container_width=True, type="primary"):
