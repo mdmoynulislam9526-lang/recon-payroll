@@ -192,7 +192,7 @@ st.components.v1.html(payslip_preview_html, height=560, scrolling=True)
             # PDF Download
 pdf_emp_data = (selected_emp['emp_id'], selected_emp['name'], selected_emp['designation'], selected_emp['category'], selected_emp['department'], house_rent, medical, adv_paid, net_final)
 pdf_buf = BytesIO()
-            generate_pdf_bytes(pdf_emp_data, full_month, rec['absent'], rec['fine'], rec['present'], pdf_buf)
+generate_pdf_bytes(pdf_emp_data, full_month, rec['absent'], rec['fine'], rec['present'], pdf_buf)
             st.download_button("📥 Download Pay Slip (PDF)", data=pdf_buf.getvalue(), file_name=f"PaySlip_{selected_id}.pdf", mime="application/pdf", use_container_width=True)                  
 with tab2:
     view_cat = st.selectbox("Select Category to Process", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
