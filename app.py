@@ -444,11 +444,12 @@ with tab2:
                 print_html += "</tbody></table></div>"
             print_html += "</div>"
 
-            if has_any_data:
+if has_any_data:
                 st.components.v1.html(print_html, height=600, scrolling=True)
                 if st.button("🖨️ CLICK HERE TO PRINT THIS FULL SHEET", use_container_width=True, type="primary"):
                     st.components.v1.html(f"{print_html}<script>window.print();</script>", height=0)
             else:
                 st.info("No records loaded yet.")
                 
-    else: st.info("Database is empty. Please add people from the left panel.")
+        else: 
+            st.info("Database is empty. Please add people from the left panel.")
