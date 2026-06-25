@@ -115,7 +115,7 @@ with col2:
         db_records = response.data
         
         # ডাটা ডিকশনারি ফরম্যাটে ট্র্যাকার তৈরি করা হচ্ছে
-            rec = saved_db_tracker.get(str(selected_id), {
+        rec = saved_db_tracker.get(str(selected_id), {
                 "present_days": 26, 
                 "absent_days": 0, 
                 "fine_amount": 0.0, 
