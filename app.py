@@ -444,13 +444,15 @@ with tab2:
                 print_html += "</tbody></table></div>"
             print_html += "</div>"
 
-if has_any_data:
-                st.components.v1.html(print_html, height=600, scrolling=True)
-                if st.button("🖨️ CLICK HERE TO PRINT THIS FULL SHEET", use_container_width=True, type="primary"):
-                    st.components.v1.html(f"{print_html}<script>window.print();</script>", height=0)
-            else:
-                st.info("No records loaded yet.")
-                
-        # এই else টি একদম শুরুর if rows: এর সাথে যুক্ত হবে
-        else: 
-            st.info("Database is empty. Please add people from the left panel.")
+# মূল ব্লক (যেকোনো একটি লেভেলে)
+if rows: 
+    # ব্লকের ভেতরের কোড (৪ স্পেস ডানে)
+    if has_any_data:
+        # আরও ৪ স্পেস ডানে
+        st.components.v1.html(print_html, height=600, scrolling=True)
+    else:
+        # else টি if এর সাথে একই লাইনে
+        st.info("No records loaded yet.")
+else: 
+    # মেইন if এর সাথে else টি সোজাসুজি
+    st.info("Database is empty. Please add people from the left panel.")
