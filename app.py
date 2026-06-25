@@ -132,7 +132,7 @@ with col2:
             } for r in db_records
         }
 
-total_payout = 0.0
+        total_payout = 0.0
         total_bonus = 0.0
         total_ot = 0.0
         total_deductions = 0.0
