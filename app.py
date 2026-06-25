@@ -346,8 +346,7 @@ print_html += f"""
                            </tr>
                            """
 else:
-                # বাটন না চাপা হলে এই তথ্যটি দেখাবে
-                st.info("Please select a category and click 'Process Attendance' to start.")
+     st.info("Please select a category and click 'Process Attendance' to start.")
 # --- NEW TAB: DASHBOARD SUMMARY ---
 with tab4:
             st.subheader("📈 Dashboard Summary")
