@@ -331,50 +331,56 @@ with tab4:
     st.subheader("📑 Summary Sheet")
     
     if rows:
-        # টেবিল তৈরির জন্য HTML শুরু
-        print_html = """
-        <div style="font-family: Arial, sans-serif; padding: 15px;">
-            <h2 style="color: #1F4E78;">Employee Monthly Summary</h2>
-            <table border='1' style='width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;'>
-                <thead>
-                    <tr style="background-color: #f2f2f2;">
-                        <th>ID</th><th>Name</th><th>Category</th><th>Net Payable</th>
-                    </tr>
-                </thead>
-                <tbody>
+        # কাস্টম স্টাইলসহ টেবিল শুরু
+        html_table = """
+        <style>
+            .styled-table { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 14px; }
+            .styled-table th { background-color: #1F4E78; color: white; padding: 10px; text-align: center; }
+            .styled-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+            .styled-table tr:nth-child(even) { background-color: #f9f9f9; }
+        </style>
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Net Payable</th>
+                </tr>
+            </thead>
+            <tbody>
         """
         
-        # ক্যালকুলেশন লজিক এবং টেবিল রো তৈরি
+        # লুপ চালিয়ে রো জেনারেট করা
         for r in rows:
-            # ডাটাবেস থেকে ট্র্যাকার ডাটা সংগ্রহ
             rec = saved_db_tracker.get(str(r['emp_id']), {
                 "present_days": 26, "absent_days": 0, "fine_amount": 0.0, 
                 "overtime_hours": 0.0, "overtime_rate": 0.0, "bonus_amount": 0.0, "advance_cut": 0.0
             })
             
-            # ক্যালকুলেশন ফাংশন কল করা
+            # ক্যালকুলেশন কল করা
             gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(
-                r['salary'], 
-                rec['absent_days'], 
-                rec['fine_amount'], 
-                r['category'], 
-                rec['present_days'], 
-                rec['advance_cut']
+                r['salary'], rec['absent_days'], rec['fine_amount'], r['category'], 
+                rec['present_days'], rec['advance_cut']
             )
-            
-            # চূড়ান্ত হিসাব
             final_payable = net_p + (rec['overtime_hours'] * rec['overtime_rate']) + rec['bonus_amount']
             
-            # টেবিলের রো যোগ করা
-            print_html += f"<tr><td>{r['emp_id']}</td><td>{r['name']}</td><td>{r['category']}</td><td>{final_payable:,.2f}</td></tr>"
+            html_table += f"""
+                <tr>
+                    <td>{r['emp_id']}</td>
+                    <td>{r['name']}</td>
+                    <td>{r['category']}</td>
+                    <td>{final_payable:,.2f}</td>
+                </tr>
+            """
         
-        print_html += "</tbody></table></div>"
+        html_table += "</tbody></table>"
         
-        # HTML ডিসপ্লে করা
-        st.components.v1.html(print_html, height=500, scrolling=True)
+        # টেবিলটি ডিসপ্লে করা
+        st.components.v1.html(html_table, height=500, scrolling=True)
         
         # প্রিন্ট বাটন
-        if st.button("🖨️ Print Full Sheet"):
-            st.components.v1.html(f"<script>window.print();</script>{print_html}", height=0)
+        if st.button("🖨️ Print Summary Sheet"):
+            st.components.v1.html(f"<script>window.print();</script>{html_table}", height=0)
     else:
-        st.info("No records loaded yet.")
+        st.info("No records found.")
