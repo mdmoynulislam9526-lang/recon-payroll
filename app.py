@@ -382,8 +382,8 @@ if st.form_submit_button("💾 Save Entry to Database", use_container_width=True
                                 }).execute()
                             st.success(f"✅ Successfully saved records for {full_month}!")
                             st.rerun()
-            st.markdown("---")
-            st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
+st.markdown("---")
+st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
 
             # --- MAIN SUMMARY SHEET WITH MATCHING ALIGNMENT FOR BULK VIEW ---
             print_html = f"""
