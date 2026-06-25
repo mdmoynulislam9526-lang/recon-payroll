@@ -79,18 +79,14 @@ if st.button("Delete ❌", key=f"{prefix}_del_{eid}", type="secondary"):
             with st.form(key=f"form_{prefix}_{eid}"):
                 ch_name = st.text_input("Name", value=ename)
                 ch_salary = st.text_input("Salary", value=str(esalary))
-                if st.form_submit_button("Save"):
-                    conn = get_db_connection()
-                    conn.cursor().execute("UPDATE employees_final_version SET name=?, salary=? WHERE emp_id=?", (ch_name, float(ch_salary), eid))
-                    conn.commit()
-                    conn.close()
-                    st.session_state[f"emode_{prefix}_{eid}"] = False
-                    st.rerun()
+if st.form_submit_button("Save"):
+    supabase.table("employees_final_version").update({"name": ch_name, "salary": float(ch_salary)}).eq("emp_id", eid).execute()
+    st.session_state[f"emode_{prefix}_{eid}"] = False
+    st.rerun()
 
 with col2:
-    conn = get_db_connection()
-    rows = conn.cursor().execute("SELECT * FROM employees_final_version").fetchall()
-    conn.close()
+    response = supabase.table("employees_final_version").select("*").execute()
+    rows = response.data
     
     if rows:
         # --- FIXED MONTH SELECTION ---
