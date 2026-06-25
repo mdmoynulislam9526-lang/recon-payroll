@@ -451,5 +451,6 @@ if has_any_data:
             else:
                 st.info("No records loaded yet.")
                 
+        # এই else টি একদম শুরুর if rows: এর সাথে যুক্ত হবে
         else: 
             st.info("Database is empty. Please add people from the left panel.")
