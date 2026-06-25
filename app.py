@@ -403,8 +403,8 @@ print_html = f"""
                 </div>
             """
 
-            categories_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
-            display_titles = ["💼 Managers Summary", "👔 Officers Summary", "🛠️ Workers (Permanent) Summary", "📆 Workers (Daily Basis) Summary"]
+categories_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
+display_titles = ["💼 Managers Summary", "👔 Officers Summary", "🛠️ Workers (Permanent) Summary", "📆 Workers (Daily Basis) Summary"]
             
             has_any_data = False
             for cat_name, title_text in zip(categories_list, display_titles):
