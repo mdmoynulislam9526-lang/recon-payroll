@@ -257,10 +257,9 @@ with tab3:
                 # সাবমিট বাটন যোগ করুন (এটি ছাড়া ফর্ম কাজ করবে না)
                 submitted = st.form_submit_button("Process Attendance")
             
-            # বাটন চাপলে যা হবে
+# বাটন চাপলে যা হবে
             if submitted:
                 st.write(f"Processing data for: {cat_to_process}...")
-                # [এখানে আপনার ডাটাবেস আপডেট করার লজিক বসান]
             # --- MAIN SUMMARY SHEET WITH MATCHING ALIGNMENT ---
             print_html = f"""
             <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; padding: 25px; background: white; color: black; border-radius: 12px;">
@@ -345,9 +344,10 @@ print_html += f"""
                                 <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #c00; font-weight: 500;">{adv_paid:,.2f}</td>
                                 <td style="border: 1px solid #dee2e6; padding: 8px; text-align: right; font-weight: 700; color: #1F4E78; background-color: #f8f9fa; font-size: 13px;">{final_payable:,.2f}</td>
                            </tr>
-                           """                
+                           """               
+                
             else:
-                # বাটন না চাপা পর্যন্ত এই মেসেজটি দেখাবে
+                # বাটন না চাপা হলে এই তথ্যটি দেখাবে
                 st.info("Please select a category and click 'Process Attendance' to start.")
 # --- NEW TAB: DASHBOARD SUMMARY ---
 with tab4:
