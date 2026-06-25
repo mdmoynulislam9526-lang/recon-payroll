@@ -132,34 +132,41 @@ with col2:
             } for r in db_records
         }
 
-    total_payout = 0.0
-    total_bonus = 0.0
-    total_ot = 0.0
-    total_deductions = 0.0
-    total_advance = 0.0
+total_payout = 0.0
+        total_bonus = 0.0
+        total_ot = 0.0
+        total_deductions = 0.0
+        total_advance = 0.0
 
         for r in rows:
-            eid, _, _, cat, _, base_sal = r
-rec = saved_db_tracker.get(str(eid), {
-    "present_days": days_in_month if cat == 'Worker (Daily Basis)' else 26, 
-    "absent_days": 0, 
-    "fine_amount": 0.0, 
-    "overtime_hours": 0.0, 
-    "overtime_rate": 0.0, 
-    "bonus_amount": 0.0, 
-    "advance_cut": 0.0
-})
+            # Supabase থেকে ডাটা এক্সেস করার সঠিক পদ্ধতি
+            eid = str(r['emp_id'])
+            cat = r['category']
+            base_sal = r['salary']
             
+            # ডাটা ট্র্যাকার থেকে রেকর্ড নেওয়া
+            rec = saved_db_tracker.get(eid, {
+                "present_days": days_in_month if cat == 'Worker (Daily Basis)' else 26, 
+                "absent_days": 0, 
+                "fine_amount": 0.0, 
+                "overtime_hours": 0.0, 
+                "overtime_rate": 0.0, 
+                "bonus_amount": 0.0, 
+                "advance_cut": 0.0
+            })
+            
+            # ক্যালকুলেশন ফাংশনে নতুন কীগুলো পাস করুন
             _, _, _, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(
-                base_sal, rec['absent'], rec['fine'], cat, rec['present'], rec['advance']
+                base_sal, rec['absent_days'], rec['fine_amount'], cat, rec['present_days'], rec['advance_cut']
             )
-            ot_earned = rec['ot_hrs'] * rec['ot_rate']
-            final_payable = net_p + ot_earned + rec['bonus']
+            
+            ot_earned = rec['overtime_hours'] * rec['overtime_rate']
+            final_payable = net_p + ot_earned + rec['bonus_amount']
             
             total_payout += final_payable
-            total_bonus += rec['bonus']
+            total_bonus += rec['bonus_amount']
             total_ot += ot_earned
-            total_deductions += (absent_cut + rec['fine'])
+            total_deductions += (absent_cut + rec['fine_amount'])
             total_advance += adv_paid
 
         st.markdown("### 📊 Financial Dashboard Summary")
