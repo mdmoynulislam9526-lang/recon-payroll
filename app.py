@@ -62,299 +62,380 @@ with col1:
 
 # --- FUNCTION: RENDER MANAGEMENT ---
 def render_inline_management(r, prefix=""):
-    eid, ename, edesg, ecat, edept, esalary = r['emp_id'], r['name'], r['designation'], r['category'], r['department'], r['salary']
+    eid, ename, edesg, ecat, edept, esalary = r
     with st.container():
         col_info, col_act1, col_act2 = st.columns([3, 0.6, 0.6])
         with col_info:
             st.markdown(f"**[{eid}] {ename}** — {edesg} ({edept}) | Tk {esalary:,.2f}")
         with col_act1:
-            if st.button("Edit 📝", key=f"{prefix}_edit_{eid}"):
-                st.session_state[f"emode_{prefix}_{eid}"] = True
+            if st.button("Edit 📝", key=f"{prefix}_edit_{eid}"): st.session_state[f"emode_{prefix}_{eid}"] = True
         with col_act2:
             if st.button("Delete ❌", key=f"{prefix}_del_{eid}", type="secondary"):
-                supabase.table("employees_final_version").delete().eq("emp_id", eid).execute()
-                supabase.table("monthly_attendance_records").delete().eq("emp_id", eid).execute()
+                conn = get_db_connection()
+                conn.cursor().execute("DELETE FROM employees_final_version WHERE emp_id=?", (eid,))
+                conn.cursor().execute("DELETE FROM monthly_attendance_records WHERE emp_id=?", (eid,))
+                conn.commit()
+                conn.close()
                 st.rerun()
         if st.session_state.get(f"emode_{prefix}_{eid}", False):
             with st.form(key=f"form_{prefix}_{eid}"):
                 ch_name = st.text_input("Name", value=ename)
                 ch_salary = st.text_input("Salary", value=str(esalary))
                 if st.form_submit_button("Save"):
-                    supabase.table("employees_final_version").update({"name": ch_name, "salary": float(ch_salary)}).eq("emp_id", eid).execute()
+                    conn = get_db_connection()
+                    conn.cursor().execute("UPDATE employees_final_version SET name=?, salary=? WHERE emp_id=?", (ch_name, float(ch_salary), eid))
+                    conn.commit()
+                    conn.close()
                     st.session_state[f"emode_{prefix}_{eid}"] = False
                     st.rerun()
 
-# --- MAIN DASHBOARD ---
 with col2:
-    response = supabase.table("employees_final_version").select("*").execute()
-    rows = response.data 
-
+    conn = get_db_connection()
+    rows = conn.cursor().execute("SELECT * FROM employees_final_version").fetchall()
+    conn.close()
+    
     if rows:
+        # --- FIXED MONTH SELECTION ---
         months_list = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-        if 'selected_month' not in st.session_state: st.session_state.selected_month = datetime.now().strftime("%B")
+        if 'selected_month' not in st.session_state:
+            st.session_state.selected_month = datetime.now().strftime("%B")
             
         c_col1, c_col2 = st.columns(2)
-        with c_col1: select_m = st.selectbox("Select Month", months_list, index=months_list.index(st.session_state.selected_month))
-        with c_col2: 
-            current_year = datetime.now().year
-            available_years = [str(y) for y in range(2023, current_year + 5)]
+        with c_col1:
+            select_m = st.selectbox("Select Month", months_list, index=months_list.index(st.session_state.selected_month))
+            st.session_state.selected_month = select_m
+        
+        current_year = datetime.now().year
+        available_years = [str(y) for y in range(2023, current_year + 5)]
+        with c_col2:
             select_y = st.selectbox("Select Year", available_years, index=available_years.index(str(current_year)))
         
         full_month = f"{select_m}, {select_y}"
-        days_in_month = calendar.monthrange(int(select_y), months_list.index(select_m) + 1)[1]
         
-        att_response = supabase.table("monthly_attendance_records").select("*").eq("month_year", full_month).execute()
-        db_records = att_response.data
-        saved_db_tracker = {str(r['emp_id']): r for r in db_records}
-# --- TABS ---
-        tab_emp, tab0, tab1, tab2, tab3, tab4 = st.tabs(["👥 All Employees", "🔍 Search", "📄 Pay Slip", "📊 Attendance & Processor", "📑 Summary Sheet", "📈 Dashboard Summary"])
+        month_num = months_list.index(select_m) + 1
+        days_in_month = calendar.monthrange(int(select_y), month_num)[1]
+        
+        conn = get_db_connection()
+        db_records = conn.cursor().execute("SELECT * FROM monthly_attendance_records WHERE month_year=?", (full_month,)).fetchall()
+        conn.close()
+        
+        saved_db_tracker = {str(r[1]): {"present": r[2], "absent": r[3], "fine": r[4], "ot_hrs": r[5], "ot_rate": r[6], "bonus": r[7], "advance": r[8]} for r in db_records}
+
+        total_payout = 0.0
+        total_bonus = 0.0
+        total_ot = 0.0
+        total_deductions = 0.0
+        total_advance = 0.0
+
+        for r in rows:
+            eid, _, _, cat, _, base_sal = r
+            rec = saved_db_tracker.get(str(eid), {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
+            
+            _, _, _, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(
+                base_sal, rec['absent'], rec['fine'], cat, rec['present'], rec['advance']
+            )
+            ot_earned = rec['ot_hrs'] * rec['ot_rate']
+            final_payable = net_p + ot_earned + rec['bonus']
+            
+            total_payout += final_payable
+            total_bonus += rec['bonus']
+            total_ot += ot_earned
+            total_deductions += (absent_cut + rec['fine'])
+            total_advance += adv_paid
+
+        st.markdown("### 📊 Financial Dashboard Summary")
+        m_col1, m_col2, m_col3, m_col4, m_col5, m_col6 = st.columns(6)
+        m_col1.metric("Total Employees", len(rows))
+        m_col2.metric("Total Bonus (Tk)", f"{total_bonus:,.2f}")
+        m_col3.metric("Total Overtime (Tk)", f"{total_ot:,.2f}")
+        m_col4.metric("Total Fine & Abs Cut (Tk)", f"{total_deductions:,.2f}")
+        m_col5.metric("Total Advance Cut (Tk)", f"{total_advance:,.2f}")
+        m_col6.metric("Total Payout (Tk)", f"{total_payout:,.2f}")
+        st.markdown("---")
+
+        tab_emp, tab0, tab1, tab2 = st.tabs(["👥 All Employees", "🔍 Search Employee", "📄 Individual Pay Slip", "📊 Attendance & Payroll Processor"])
         
         with tab_emp:
             categories_map = {"💼 Managers": "Manager", "👔 Officers": "Officer", "🛠️ Workers (Permanent)": "Worker (Permanent)", "📆 Workers (Daily Basis)": "Worker (Daily Basis)"}
             for title, cat_value in categories_map.items():
-                cat_members = [r for r in rows if r['category'] == cat_value]
+                cat_members = [r for r in rows if r[3] == cat_value]
                 with st.expander(f"{title} ({len(cat_members)})", expanded=False):
                     if not cat_members: st.info("No records.")
                     else:
                         for r in cat_members: render_inline_management(r, prefix="all_tab")
 
         with tab0:
-            st.subheader("🔍 Search Employee")
             search_query = st.text_input("Enter Employee ID or Name to search", placeholder="Type here...", key="search_tab_input")
             if search_query:
-                search_results = [r for r in rows if search_query.lower() in str(r['emp_id']).lower() or search_query.lower() in r['name'].lower()]
-                for emp in search_results: render_inline_management(emp, prefix="search_tab")       
+                search_results = [r for r in rows if search_query.lower() in r[0].lower() or search_query.lower() in r[1].lower()]
+                for emp in search_results: render_inline_management(emp, prefix="search_tab")
 
-with tab1:
-            st.subheader("📄 Employee Pay Slip Preview")
-            
-            # এমপ্লয়ি সিলেকশন
-            emp_options = [f"{r['emp_id']} - {r['name']}" for r in rows]
-            selected_emp_id = st.selectbox("Select Employee", emp_options, key="ps_select")
-            
-            # আইডি আলাদা করা
-            selected_id = selected_emp_id.split(" - ")[0]
-            
-            # এমপ্লয়ি ডাটা খোঁজা
-            selected_emp = next(r for r in rows if str(r['emp_id']) == selected_id)
-            
-            # ডাটাবেস থেকে ট্র্যাকার ডাটা নেয়া
-            rec = saved_db_tracker.get(str(selected_id), {
-                "present_days": 26, 
-                "absent_days": 0, 
-                "fine_amount": 0.0, 
-                "overtime_hours": 0.0, 
-                "overtime_rate": 0.0, 
-                "bonus_amount": 0.0, 
-                "advance_cut": 0.0
-            })
-            
-            # স্যালারি ক্যালকুলেশন
-            gross, house_rent, medical, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(
-                selected_emp['salary'], 
-                rec['absent_days'], 
-                rec['fine_amount'], 
-                selected_emp['category'], 
-                rec['present_days'], 
-                rec['advance_cut']
-            )
-            total_ot_emp = rec['overtime_hours'] * rec['overtime_rate']
-            net_final = net_p + total_ot_emp + rec['bonus_amount']
-            
-            # সিগনেচার লজিক
-            sig_html_element = f"<img src='data:image/png;base64,{sig_base64_str}' style='width: 150px;'>" if 'sig_base64_str' in locals() and sig_base64_str else "____________________"
-            
-            # Pay Slip HTML Design (সংশোধিত টেবিল অংশ)
-            payslip_preview_html = f"""
-            <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 35px; background: white; color: black; border: 1px solid #c8d6e5; border-radius: 8px; max-width: 700px; margin: 15px auto; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
-                <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #1F4E78;">
-                    {"<img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 65px;'>" if 'logo_base64_str' in locals() and logo_base64_str else ""}
-                </div>
-                <div style="text-align: center; font-weight: 700; color: #1F4E78; margin-bottom: 20px;">EMPLOYEE PAY SLIP - {full_month}</div>
-                
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px;">
-                    <tr><td style="padding: 5px; border: 1px solid #ddd;">ID: #{selected_emp['emp_id']}</td><td style="padding: 5px; border: 1px solid #ddd;">Dept: {selected_emp['department']}</td></tr>
-                    <tr><td style="padding: 5px; border: 1px solid #ddd;">Name: {selected_emp['name']}</td><td style="padding: 5px; border: 1px solid #ddd;">Desig: {selected_emp['designation']}</td></tr>
-                </table>
-
-                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                    <tr style="background-color: #f8fafc;"><th>Earnings</th><th>Amount</th><th>Deductions</th><th>Amount</th></tr>
-                    <tr><td>Base Pay</td><td>{selected_emp['salary']:,.2f}</td><td>Absent Cut</td><td>{absent_cut:,.2f}</td></tr>
-                    <tr><td>OT Earned</td><td>{total_ot_emp:,.2f}</td><td>Fine</td><td>{rec['fine_amount']:,.2f}</td></tr>
-                    <tr><td>Bonus</td><td>{rec['bonus_amount']:,.2f}</td><td>Advance</td><td>{adv_paid:,.2f}</td></tr>
-                    <tr style="border-top: 2px solid #1F4E78; font-weight: bold;"><td>Net Payable</td><td>Tk {net_final:,.2f}</td><td></td><td></td></tr>
-                </table>
-
-                <div style="margin-top: 40px; text-align: right;">{sig_html_element}<br>Authorized Signature</div>
-            </div>
-            """
-            st.components.v1.html(payslip_preview_html, height=560, scrolling=True)
-            
-            # PDF Download Button
-            pdf_emp_data = (selected_emp['emp_id'], selected_emp['name'], selected_emp['designation'], selected_emp['category'], selected_emp['department'], house_rent, medical, adv_paid, net_final)
-            pdf_buf = BytesIO()
-            generate_pdf_bytes(pdf_emp_data, full_month, rec['absent_days'], rec['fine_amount'], rec['present_days'], pdf_buf)
-            st.download_button(
-                label="📥 Download Pay Slip",
-                data=pdf_buf.getvalue(),
-                file_name=f"Pay_Slip_{selected_emp['name']}_{full_month}.pdf",
-                mime="application/pdf"
-            )                
-with tab2:
-    view_cat = st.selectbox("Select Category to Process", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
-    
-    # ডাটাবেসের ক্যাটাগরির সাথে মিলানোর জন্য .strip() ব্যবহার করা ভালো
-    filtered_rows = [r for r in rows if r['category'] == view_cat]
-    
-    if filtered_rows:
-        # ফর্ম শুরু হচ্ছে
-        with st.form(key=f"bulk_sheet_form_{view_cat.replace(' ', '_')}"):
-            sheet_data = [] 
-            
-            for r in filtered_rows:
-                st.markdown(f"**🔹 {r['emp_id']} - {r['name']}**")
-                
-                # ডাটাবেস থেকে বর্তমান মানগুলো নেওয়া
-                rec = saved_db_tracker.get(str(r['emp_id']), {"present_days": days_in_month, "absent_days": 0, "fine_amount": 0.0, "overtime_hours": 0.0, "overtime_rate": 0.0, "bonus_amount": 0.0, "advance_cut": 0.0})
-                
-                col_in1, col_in2, col_in3 = st.columns(3)
-                with col_in1:
-                    a_d = st.number_input("Absent Days", 0, 31, int(rec.get('absent_days', 0)), key=f"a_{r['emp_id']}")
-                    f_d = st.number_input("Fine (Tk)", 0.0, value=float(rec.get('fine_amount', 0.0)), key=f"f_{r['emp_id']}")
-                with col_in2:
-                    ot_h = st.number_input("OT Hours", 0.0, 200.0, value=float(rec.get('overtime_hours', 0.0)), key=f"oth_{r['emp_id']}")
-                    ot_r = st.number_input("OT Rate", 0.0, 1000.0, value=float(rec.get('overtime_rate', 0.0)), key=f"otr_{r['emp_id']}")
-                with col_in3:
-                    bonus_amt = st.number_input("Bonus", 0.0, 200000.0, value=float(rec.get('bonus_amount', 0.0)), key=f"bn_{r['emp_id']}")
-                    adv_cut = st.number_input("Adv Cut", 0.0, 200000.0, value=float(rec.get('advance_cut', 0.0)), key=f"adv_{r['emp_id']}")
-                
-                sheet_data.append({
-                    'eid': r['emp_id'], 'p': days_in_month - a_d, 'a': a_d, 
-                    'f': f_d, 'oth': ot_h, 'otr': ot_r, 'bonus': bonus_amt, 'adv': adv_cut
-                })
-            
-            # সাবমিট বাটনটি অবশ্যই ফর্মের ভেতরে থাকতে হবে
-            submitted = st.form_submit_button("💾 Save Entry to Database")
-        
-        # ফর্ম সাবমিট হলে ডাটাবেসে আপডেট করা (ফর্মের বাইরে)
-        if submitted:
-            try:
-                for item in sheet_data:
-                    supabase.table("monthly_attendance_records").upsert({
-                        "month_year": str(full_month), 
-                        "emp_id": int(item['eid']), 
-                        "present_days": int(item['p']),
-                        "absent_days": int(item['a']),
-                        "fine_amount": float(item['f']),
-                        "overtime_hours": float(item['oth']),
-                        "overtime_rate": float(item['otr']),
-                        "bonus_amount": float(item['bonus']),
-                        "advance_cut": float(item['adv'])
-                    }).execute()
-                st.success("সফলভাবে সেভ হয়েছে! 🎉")
-                st.rerun()
-            except Exception as e:
-                st.error(f"❌ ডাটাবেস এরর: {e}")
-    else:
-        st.info("এই ক্যাটাগরিতে কোনো এমপ্লয়ি নেই।")
-with tab3:
-            st.subheader("📊 Attendance & Processor")
-            
-            # Form starts here
-            with st.form("attendance_processor_form"):
-                cat_to_process = st.selectbox("Select Category to Process", 
-                                            ["Officer", "Manager", "Worker (Permanent)", "Worker (Daily Basis)"])
-                
-                # Submit button (Form এর ভেতরে)
-                submitted = st.form_submit_button("Process Attendance")
-            
-            # Logic starts here (Form এর বাইরে, কিন্তু ট্যাব এর ভেতরে)
-            if submitted:
-                st.write(f"Processing data for: {cat_to_process}...")
-                
-                # --- MAIN SUMMARY SHEET ---
-                print_html = f"""
-                <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; padding: 25px; background: white; color: black; border-radius: 12px;">
-                    <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #1F4E78;">
-                        {"<div style='margin-bottom: 5px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 70px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if 'logo_base64_str' in locals() else ""}
-                    </div>
-                    <div style="text-align: center; font-weight: 700; color: #1F4E78; margin-bottom: 20px;">Employee Monthly Payroll Statement Sheet</div>
-                """
-
-                categories_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
-                display_titles = ["💼 Managers Summary", "👔 Officers Summary", "🛠️ Workers (Permanent) Summary", "📆 Workers (Daily Basis) Summary"]
-                
-                for cat_name, title_text in zip(categories_list, display_titles):
-                    cat_rows = [r for r in rows if r['category'] == cat_name]
-                    if not cat_rows: continue
+        # --- TAB 1: INDIVIDUAL PAY SLIP (CLASSIC OFFICE TABLE DESIGN) ---
+        with tab1:
+            pay_search = st.text_input("Enter Employee ID or Name for Pay Slip", key="pay_slip_search_input")
+            if pay_search:
+                pay_results = [r for r in rows if pay_search.lower() in r[0].lower() or pay_search.lower() in r[1].lower()]
+                if pay_results:
+                    selected_emp = pay_results[0]
+                    rec = saved_db_tracker.get(str(selected_emp[0]), {"present": days_in_month if selected_emp[3] == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
                     
-                    print_html += f"""
-                    <h3 style="color: #1F4E78; border-left: 5px solid #1F4E78; padding-left: 10px; margin-top: 30px; margin-bottom: 12px; font-size: 16px; font-weight: 700;">{title_text}</h3>
-                    <div style="overflow-x: auto; max-width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.02); border-radius: 6px;">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 20px; background: white; min-width: 1150px;">
+                    st.success(f"Selected: {selected_emp[1]} ({selected_emp[0]})")
+                    
+                    gross, house_rent, medical, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(
+                        selected_emp[5], rec['absent'], rec['fine'], selected_emp[3], rec['present'], rec['advance']
+                    )
+                    
+                    total_ot_emp = rec['ot_hrs'] * rec['ot_rate']
+                    net_final = net_p + total_ot_emp + rec['bonus']
+                    
+                    sig_html_element = ""
+                    if seal_base64_str:
+                        sig_html_element += f"<img src='data:image/png;base64,{seal_base64_str}' style='max-height: 75px; width: auto; display: block; margin: 0 auto -45px auto; z-index: 8; position: relative; opacity: 0.85;' alt='Seal'>"
+                    if sig_base64_str:
+                        sig_html_element += f"<img src='data:image/png;base64,{sig_base64_str}' style='max-height: 60px; width: auto; display: block; margin: 0 auto -25px auto; z-index: 12; position: relative;' alt='Signature'>"
+                    
+                    if not sig_base64_str and not seal_base64_str:
+                        sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[Images Not Found]</div>"
+
+                    # 💎 CLASSIC OFFICE TABLE DESIGN (EMPLOYEE INFO INSIDE A STRUCTURED TABLE)
+                    payslip_preview_html = f"""
+                    <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 35px; background: white; color: black; border: 1px solid #c8d6e5; border-radius: 8px; max-width: 700px; margin: 15px auto; box-sizing: border-box; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
+                        
+                        <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #1F4E78;">
+                            {"<div style='margin-bottom: 5px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 65px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; width: 100%;">
+                            <div style="width: 25%;"></div>
+                            <div style="width: 50%; text-align: center;">
+                                <span style="font-size: 16px; color: #1F4E78; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Employee Pay Slip</span>
+                            </div>
+                            <div style="width: 25%; text-align: right;">
+                                <span style="font-size: 12px; color: #1F4E78; font-weight: 700; background-color: #f0f4f8; padding: 4px 10px; border-radius: 4px; border: 1px solid #b4c6e7; text-transform: uppercase;">{select_m[:3]} {select_y}</span>
+                            </div>
+                        </div>
+                        
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 13px; border: 1px solid #cbd5e1;">
+                            <tr style="background-color: #f8fafc;">
+                                <td style="padding: 10px; font-weight: 600; color: #475569; width: 25%; border: 1px solid #cbd5e1;">Employee ID</td>
+                                <td style="padding: 10px; font-weight: 700; color: #0f172a; width: 25%; border: 1px solid #cbd5e1;">#{selected_emp[0]}</td>
+                                <td style="padding: 10px; font-weight: 600; color: #475569; width: 25%; border: 1px solid #cbd5e1;">Department</td>
+                                <td style="padding: 10px; font-weight: 600; color: #1F4E78; width: 25%; border: 1px solid #cbd5e1;">{selected_emp[4]}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 10px; font-weight: 600; color: #475569; border: 1px solid #cbd5e1;">Full Name</td>
+                                <td style="padding: 10px; font-weight: 700; color: #0f172a; border: 1px solid #cbd5e1;">{selected_emp[1]}</td>
+                                <td style="padding: 10px; font-weight: 600; color: #475569; border: 1px solid #cbd5e1;">Designation</td>
+                                <td style="padding: 10px; font-weight: 600; color: #1F4E78; border: 1px solid #cbd5e1;">{selected_emp[2]}</td>
+                            </tr>
+                            <tr style="background-color: #f8fafc;">
+                                <td style="padding: 10px; font-weight: 600; color: #475569; border: 1px solid #cbd5e1;">Category</td>
+                                <td style="padding: 10px; font-weight: 600; color: #334155; border: 1px solid #cbd5e1;">{selected_emp[3]}</td>
+                                <td style="padding: 10px; font-weight: 600; color: #475569; border: 1px solid #cbd5e1;">Attendance Status</td>
+                                <td style="padding: 10px; font-weight: 700; color: #2563eb; border: 1px solid #cbd5e1;">{rec['present']} P  /  {rec['absent']} A</td>
+                            </tr>
+                        </table>
+                        
+                        <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 25px;">
                             <thead>
-                                <tr style="background-color: #1F4E78; color: white; text-align: center; font-weight: 600;">
-                                    <th style="border: 1px solid #dee2e6; padding: 8px;">ID</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left;">Name</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px;">Net Payable</th>
+                                <tr style="background-color: #F8FAFC; border-top: 1px solid #E2E8F0; border-bottom: 1px solid #E2E8F0;">
+                                    <th style="padding: 10px 8px; text-align: left; color: #1F4E78; font-weight: 700; width: 30%; border-right: 1px solid #EDF2F7;">Earnings</th>
+                                    <th style="padding: 10px 8px; text-align: right; color: #1F4E78; font-weight: 700; width: 20%; border-right: 2px solid #E2E8F0;">Amount (Tk)</th>
+                                    <th style="padding: 10px 8px; text-align: left; color: #9B2C2C; font-weight: 700; width: 30%; padding-left: 15px; border-right: 1px solid #EDF2F7;">Deductions</th>
+                                    <th style="padding: 10px 8px; text-align: right; color: #9B2C2C; font-weight: 700; width: 20%;">Amount (Tk)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                    """
-                    
-                    for r in cat_rows:
-                        eid, name = r['emp_id'], r['name']
-                        # Data check
-                        rec = saved_db_tracker.get(str(eid), {"present_days": 26, "absent_days": 0, "fine_amount": 0.0, "overtime_hours": 0.0, "overtime_rate": 0.0, "bonus_amount": 0.0, "advance_cut": 0.0})
+                                <tr>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #E2E8F0; border-right: 1px solid #EDF2F7;">Base Pay</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #E2E8F0; font-weight: 500; border-right: 2px solid #E2E8F0;">{gross:,.2f}</td>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #E2E8F0; padding-left: 15px; color: #C53030; border-right: 1px solid #EDF2F7;">Absent Cut</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #E2E8F0; color: #C53030; font-weight: 500;">{absent_cut:,.2f}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #E2E8F0; color: #4A5568; border-right: 1px solid #EDF2F7;">House Rent</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #E2E8F0; color: #4A5568; border-right: 2px solid #E2E8F0;">{house_rent:,.2f}</td>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #E2E8F0; padding-left: 15px; color: #C53030; border-right: 1px solid #EDF2F7;">Fine / Penalty</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #E2E8F0; color: #C53030; font-weight: 500;">{rec['fine']:,.2f}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #E2E8F0; color: #4A5568; border-right: 1px solid #EDF2F7;">Medical</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #E2E8F0; color: #4A5568; border-right: 2px solid #E2E8F0;">{medical:,.2f}</td>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #E2E8F0; padding-left: 15px; color: #C53030; border-right: 1px solid #EDF2F7;">Advance Cut</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #E2E8F0; color: #C53030; font-weight: 500;">{adv_paid:,.2f}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #E2E8F0; color: #2F855A; font-weight: 500; border-right: 1px solid #EDF2F7;">Overtime ({rec['ot_hrs']} hrs)</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #E2E8F0; color: #2F855A; font-weight: 500; border-right: 2px solid #E2E8F0;">{total_ot_emp:,.2f}</td>
+                                    <td style="padding: 9px 8px; border-bottom: 1px dashed #E2E8F0; border-right: 1px solid #EDF2F7; padding-left: 15px;"></td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px dashed #E2E8F0;"></td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 9px 8px; border-bottom: 1px solid #E2E8F0; color: #2F855A; font-weight: 500; border-right: 1px solid #EDF2F7;">Bonus</td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px solid #E2E8F0; color: #2F855A; font-weight: 500; border-right: 2px solid #E2E8F0;">{rec['bonus']:,.2f}</td>
+                                    <td style="padding: 9px 8px; border-bottom: 1px solid #E2E8F0; border-right: 1px solid #EDF2F7; padding-left: 15px;"></td>
+                                    <td style="padding: 9px 8px; text-align: right; border-bottom: 1px solid #E2E8F0;"></td>
+                                </tr>
+                                <tr style="background-color: #F8FAFC; font-weight: bold; border-top: 2px solid #E2E8F0;">
+                                    <td style="padding: 12px 8px; color: #1F4E78; font-size: 14px;" colspan="2">Net Payable Salary:</td>
+                                    <td style="padding: 12px 8px; text-align: right; color: #1F4E78; font-size: 15px; font-weight: 700;" colspan="2">Tk {net_final:,.2f}</td>
+                                </tr>
+                            </tbody>
+                        </table>
                         
-                        gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(
-                            r['salary'], rec['absent_days'], rec['fine_amount'], cat_name, rec['present_days'], rec['advance_cut']
-                        )
-                        final_payable = net_p + (rec['overtime_hours'] * rec['overtime_rate']) + rec['bonus_amount']
+                        <div style="margin-top: 50px; display: flex; justify-content: flex-end;">
+                            <div style="text-align: center; width: 190px; position: relative;">
+                                {sig_html_element}
+                                <div style="border-top: 1.5px solid #333; padding-top: 6px; font-size: 12px; font-weight: 600; color: #333; position: relative; z-index: 5; letter-spacing: 0.3px;">Authorized Signature</div>
+                            </div>
+                        </div>
+                    </div>
+                    """
+                    st.components.v1.html(payslip_preview_html, height=560, scrolling=True)
+                    
+                    pdf_emp_data = (
+                        selected_emp[0], selected_emp[1], selected_emp[2], selected_emp[3], selected_emp[4],
+                        house_rent, medical, adv_paid, net_final
+                    )
+                    
+                    pdf_buf = BytesIO()
+                    generate_pdf_bytes(pdf_emp_data, full_month, rec['absent'], rec['fine'], rec['present'], pdf_buf)
+                    st.download_button("📥 Download Pay Slip (PDF)", data=pdf_buf.getvalue(), file_name=f"PaySlip_{selected_emp[0]}_{select_m}.pdf", mime="application/pdf", use_container_width=True)
 
-                        print_html += f"""
-                            <tr>
-                                <td style="border: 1px solid #e9ecef; padding: 8px;">{eid}</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px;">{name}</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px;">{final_payable:,.2f}</td>
-                            </tr>
-                        """
-                    print_html += "</tbody></table></div>"
+        # --- TAB 2: ATTENDANCE & PROCESSOR ---
+        with tab2:
+            view_cat = st.selectbox("Select Category to Process", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
+            filtered_rows = [r for r in rows if r[3] == view_cat]
+            
+            sheet_data = []
+            if filtered_rows:
+                with st.form("bulk_sheet_form_v5"):
+                    for r in filtered_rows:
+                        st.markdown(f"**🔹 {r[0]} - {r[1]}** ({r[2]})")
+                        rec = saved_db_tracker.get(str(r[0]), {"present": days_in_month if r[3] == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
+                        
+                        col_in1, col_in2, col_in3 = st.columns(3)
+                        with col_in1:
+                            total_target_days = st.number_input("Total Target Days", 1, 100, int(rec['present'] + rec['absent']) if rec['absent'] > 0 else (days_in_month if r[3] == 'Worker (Daily Basis)' else max(26, int(rec['present']))), key=f"target_{r[0]}")
+                            a_d = st.number_input("Absent Days", 0, total_target_days, int(rec['absent']), key=f"a_{r[0]}")
+                            p_d = total_target_days - a_d
+                            f_d = st.number_input("Penalty/Fine (Tk)", 0.0, value=float(rec['fine']), key=f"f_{r[0]}")
+                        
+                        with col_in2:
+                            ot_h = st.number_input("Overtime Hours", 0.0, 200.0, value=float(rec['ot_hrs']), key=f"oth_{r[0]}")
+                            ot_r = st.number_input("OT Rate per Hour (Tk)", 0.0, 1000.0, value=float(rec['ot_rate']), key=f"otr_{r[0]}")
+                        
+                        with col_in3:
+                            bonus_amt = st.number_input("Bonus Amount (Tk)", 0.0, 200000.0, value=float(rec['bonus']), key=f"bn_{r[0]}")
+                            adv_cut = st.number_input("Advanced Salary Cut (Tk)", 0.0, 200000.0, value=float(rec['advance']), key=f"adv_{r[0]}")
+                        
+                        sheet_data.append({'eid': r[0], 'p': p_d, 'a': a_d, 'f': f_d, 'oth': ot_h, 'otr': ot_r, 'bonus': bonus_amt, 'adv': adv_cut})
+                        st.markdown("<hr style='margin:2px 0; border-color:#eee;'>", unsafe_allow_html=True)
+                    
+                    st.markdown("#### 🔒 Data Saving Security Verification")
+                    confirm_save = st.checkbox(f"I intentionally want to save/overwrite data for **{full_month}**.")
+                    
+                    if st.form_submit_button("💾 Save Entry to Database", use_container_width=True, type="primary"):
+                        if not confirm_save:
+                            st.error(f"❌ Action Denied! Please check the permission box above to confirm saving data for **{full_month}**.")
+                        else:
+                            conn = get_db_connection()
+                            for item in sheet_data:
+                                conn.cursor().execute("""
+                                    INSERT OR REPLACE INTO monthly_attendance_records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                """, (full_month, item['eid'], item['p'], item['a'], item['f'], item['oth'], item['otr'], item['bonus'], item['adv']))
+                            conn.commit()
+                            conn.close()
+                            st.success(f"✅ Successfully saved records for {full_month}!")
+                            st.rerun()
+
+            st.markdown("---")
+            st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
+
+            # --- MAIN SUMMARY SHEET WITH MATCHING ALIGNMENT FOR BULK VIEW ---
+            print_html = f"""
+            <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; padding: 25px; background: white; color: black; border-radius: 12px;">
+                <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #1F4E78;">
+                    {"<div style='margin-bottom: 5px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 70px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
+                </div>
                 
-                print_html += "</div>"
-                st.components.v1.html(print_html, height=800, scrolling=True)
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; width: 100%;">
+                    <div style="width: 20%;"></div>
+                    <div style="width: 60%; text-align: center;">
+                        <span style="font-size: 17px; color: #1F4E78; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;">Employee Monthly Payroll Statement Sheet</span>
+                    </div>
+                    <div style="width: 20%; text-align: right;">
+                        <span style="font-size: 13px; color: #555; font-weight: 600; background-color: #f8f9fa; padding: 4px 10px; border-radius: 6px; border: 1px solid #e9ecef;">Period: {full_month}</span>
+                    </div>
+                </div>
+            """
+
+            categories_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
+            display_titles = ["💼 Managers Summary", "👔 Officers Summary", "🛠️ Workers (Permanent) Summary", "📆 Workers (Daily Basis) Summary"]
             
+            has_any_data = False
+            for cat_name, title_text in zip(categories_list, display_titles):
+                cat_rows = [r for r in rows if r[3] == cat_name]
+                if not cat_rows: continue
+                
+                has_any_data = True
+                print_html += f"""
+                <h3 style="color: #1F4E78; border-left: 5px solid #1F4E78; padding-left: 10px; margin-top: 30px; margin-bottom: 12px; font-size: 16px; font-weight: 700;">{title_text}</h3>
+                <div style="overflow-x: auto; max-width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.02); border-radius: 6px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 20px; background: white; min-width: 1150px;">
+                        <thead>
+                            <tr style="background-color: #1F4E78; color: white; text-align: center; font-weight: 600;">
+                                <th style="border: 1px solid #dee2e6; padding: 8px;">ID</th>
+                                <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left; width: 15%;">Employee Name</th>
+                                <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left;">Department</th>
+                                <th style="border: 1px solid #dee2e6; padding: 8px;">Base Pay</th>
+                                <th style="border: 1px solid #dee2e6; padding: 8px;">H.Rent</th>
+                                <th style="border: 1px solid #dee2e6; padding: 8px;">Medical</th>
+                                <th style="border: 1px solid #dee2e6; padding: 8px;">P/A Days</th>
+                                <th style="border: 1px solid #dee2e6; padding: 8px; color: #ffbcbc;">Abs Cut</th>
+                                <th style="border: 1px solid #dee2e6; padding: 8px; color: #ffbcbc;">Fine</th>
+                                <th style="border: 1px solid #dee2e6; padding: 8px; color: #b4ffb4;">OT Earn</th>
+                                <th style="border: 1px solid #dee2e6; padding: 8px; color: #b4ffb4;">Bonus</th>
+                                <th style="border: 1px solid #dee2e6; padding: 8px; color: #ffbcbc;">Adv Cut</th>
+                                <th style="border: 1px solid #dee2e6; padding: 8px; background-color: #163654; font-weight: 700;">Net Payable</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                """
+                
+                for r in cat_rows:
+                    eid, name, desg, cat, dept, base_sal = r
+                    rec = saved_db_tracker.get(str(eid), {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
+                    
+                    gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(base_sal, rec['absent'], rec['fine'], cat, rec['present'], rec['advance'])
+                    ot_total = rec['ot_hrs'] * rec['ot_rate']
+                    final_payable = net_p + ot_total + rec['bonus']
+                    
+                    print_html += f"""
+                            <tr style="text-align: center; background-color: white; border-bottom: 1px solid #efefef;">
+                                <td style="border: 1px solid #e9ecef; padding: 8px; font-weight: 700; color: #333;">{str(eid)}</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: left; font-weight: 700; color: #1F4E78;">{name}</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: left; color: #555;">{dept}</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; font-weight: 500;">{base_sal:,.2f}</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #666;">{house_rent:,.2f}</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #666;">{medical:,.2f}</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px; font-weight: 500; color: #495057;">{rec['present']}P / {rec['absent']}A</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #c00; font-weight: 500;">{ab_cut:,.2f}</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #c00; font-weight: 500;">{rec['fine']:,.2f}</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #1e7e34; font-weight: 500;">{ot_total:,.2f}</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #1e7e34; font-weight: 500;">{rec['bonus']:,.2f}</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #c00; font-weight: 500;">{adv_paid:,.2f}</td>
+                                <td style="border: 1px solid #dee2e6; padding: 8px; text-align: right; font-weight: 700; color: #1F4E78; background-color: #f8f9fa; font-size: 13px;">{final_payable:,.2f}</td>
+                            </tr>
+                    """
+                print_html += "</tbody></table></div>"
+            print_html += "</div>"
+
+            if has_any_data:
+                st.components.v1.html(print_html, height=600, scrolling=True)
+                if st.button("🖨️ CLICK HERE TO PRINT THIS FULL SHEET", use_container_width=True, type="primary"):
+                    st.components.v1.html(f"{print_html}<script>window.print();</script>", height=0)
             else:
-                st.info("Please select a category and click 'Process Attendance' to start.")
-# --- NEW TAB: DASHBOARD SUMMARY ---
-with tab4:
-            st.subheader("📈 Dashboard Summary")
-            total_employees = len(rows)
-            total_salary_budget = sum([r['salary'] for r in rows])
-            
-            col_stat1, col_stat2 = st.columns(2)
-            col_stat1.metric("Total Employees", total_employees)
-            col_stat2.metric("Total Base Salary Budget", f"Tk {total_salary_budget:,.2f}")
-            
-# ... (পূর্বের কোড)
-df_rows = pd.DataFrame(rows)
-if not df_rows.empty:
-    cat_summary = df_rows.groupby('category')['salary'].agg(['count', 'sum']).reset_index()
-    cat_summary.columns = ['Category', 'Employee Count', 'Total Salary']
-    st.table(cat_summary)
-    st.bar_chart(cat_summary.set_index('Category')['Total Salary'])
-    
-    # এখানে ভেরিয়েবলটি আগে তৈরি করে নিন (এই লাইনটি যোগ করুন)
-    print_html = "<div><table><tbody>" 
-    
-    # এখন আপনার দেওয়া লাইনগুলো কাজ করবে
-    print_html += "</tbody></table></div>"
-    print_html += "</div>"
-    
-    # has_any_data এর জায়গায় True ব্যবহার করুন কারণ ডেটা আছে
-    if True: 
-        st.components.v1.html(print_html, height=600, scrolling=True)
-        if st.button("🖨️ CLICK HERE TO PRINT THIS FULL SHEET", use_container_width=True, type="primary"):
-            st.components.v1.html(f"{print_html}<script>window.print();</script>", height=0)
-else:
-    st.info("No records loaded yet.")
+                st.info("No records loaded yet.")
+                
+    else: st.info("Database is empty. Please add people from the left panel.")
