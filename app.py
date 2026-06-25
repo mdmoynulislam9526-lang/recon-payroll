@@ -202,50 +202,61 @@ with tab1:
             )                
 with tab2:
     view_cat = st.selectbox("Select Category to Process", ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"], key="att_sheet_cat")
+    
+    # ডাটাবেসের ক্যাটাগরির সাথে মিলানোর জন্য .strip() ব্যবহার করা ভালো
     filtered_rows = [r for r in rows if r['category'] == view_cat]
     
     if filtered_rows:
-        # ফর্ম শুরু
-        with st.form("bulk_sheet_form_v5"):
-            sheet_data = [] # এটি ফর্মের ভেতরে থাকতে হবে
+        # ফর্ম শুরু হচ্ছে
+        with st.form(key=f"bulk_sheet_form_{view_cat.replace(' ', '_')}"):
+            sheet_data = [] 
+            
             for r in filtered_rows:
                 st.markdown(f"**🔹 {r['emp_id']} - {r['name']}**")
-                rec = saved_db_tracker.get(str(r['emp_id']), {"present": days_in_month, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
+                
+                # ডাটাবেস থেকে বর্তমান মানগুলো নেওয়া
+                rec = saved_db_tracker.get(str(r['emp_id']), {"present_days": days_in_month, "absent_days": 0, "fine_amount": 0.0, "overtime_hours": 0.0, "overtime_rate": 0.0, "bonus_amount": 0.0, "advance_cut": 0.0})
                 
                 col_in1, col_in2, col_in3 = st.columns(3)
                 with col_in1:
-                    a_d = st.number_input("Absent Days", 0, 31, int(rec['absent']), key=f"a_{r['emp_id']}")
-                    f_d = st.number_input("Fine (Tk)", 0.0, value=float(rec['fine']), key=f"f_{r['emp_id']}")
+                    a_d = st.number_input("Absent Days", 0, 31, int(rec.get('absent_days', 0)), key=f"a_{r['emp_id']}")
+                    f_d = st.number_input("Fine (Tk)", 0.0, value=float(rec.get('fine_amount', 0.0)), key=f"f_{r['emp_id']}")
                 with col_in2:
-                    ot_h = st.number_input("OT Hours", 0.0, 200.0, value=float(rec['ot_hrs']), key=f"oth_{r['emp_id']}")
-                    ot_r = st.number_input("OT Rate", 0.0, 1000.0, value=float(rec['ot_rate']), key=f"otr_{r['emp_id']}")
+                    ot_h = st.number_input("OT Hours", 0.0, 200.0, value=float(rec.get('overtime_hours', 0.0)), key=f"oth_{r['emp_id']}")
+                    ot_r = st.number_input("OT Rate", 0.0, 1000.0, value=float(rec.get('overtime_rate', 0.0)), key=f"otr_{r['emp_id']}")
                 with col_in3:
-                    bonus_amt = st.number_input("Bonus", 0.0, 200000.0, value=float(rec['bonus']), key=f"bn_{r['emp_id']}")
-                    adv_cut = st.number_input("Adv Cut", 0.0, 200000.0, value=float(rec['advance']), key=f"adv_{r['emp_id']}")
+                    bonus_amt = st.number_input("Bonus", 0.0, 200000.0, value=float(rec.get('bonus_amount', 0.0)), key=f"bn_{r['emp_id']}")
+                    adv_cut = st.number_input("Adv Cut", 0.0, 200000.0, value=float(rec.get('advance_cut', 0.0)), key=f"adv_{r['emp_id']}")
                 
-                sheet_data.append({'eid': r['emp_id'], 'p': days_in_month-a_d, 'a': a_d, 'f': f_d, 'oth': ot_h, 'otr': ot_r, 'bonus': bonus_amt, 'adv': adv_cut})
+                sheet_data.append({
+                    'eid': r['emp_id'], 'p': days_in_month - a_d, 'a': a_d, 
+                    'f': f_d, 'oth': ot_h, 'otr': ot_r, 'bonus': bonus_amt, 'adv': adv_cut
+                })
             
-            # সাবমিট বাটনটি অবশ্যই ফর্মের ভেতরে থাকতে হবে (এই ইন্ডেন্টেশনটি খেয়াল করুন)
+            # সাবমিট বাটনটি অবশ্যই ফর্মের ভেতরে থাকতে হবে
             submitted = st.form_submit_button("💾 Save Entry to Database")
-            
-            if submitted:
-                try:
-                    for item in sheet_data:
-                        supabase.table("monthly_attendance_records").upsert({
-                          "month_year": str(full_month), 
-                          "emp_id": int(item['eid']), 
-                          "present_days": int(item['p']),      # 'present' এর বদলে 'present_days'
-                          "absent_days": int(item['a']),       # 'absent' এর বদলে 'absent_days'
-                          "fine_amount": float(item['f']),     # 'fine' এর বদলে 'fine_amount'
-                          "overtime_hours": float(item['oth']),# 'ot_hrs' এর বদলে 'overtime_hours'
-                          "overtime_rate": float(item['otr']), # 'ot_rate' এর বদলে 'overtime_rate'
-                          "bonus_amount": float(item['bonus']),# 'bonus' এর বদলে 'bonus_amount'
-                          "advance_cut": float(item['adv'])    # 'advance' এর বদলে 'advance_cut'
-                       }).execute()
-                    st.success("সফলভাবে সেভ হয়েছে! 🎉")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"❌ ডাটাবেস এরর: {e}")
+        
+        # ফর্ম সাবমিট হলে ডাটাবেসে আপডেট করা (ফর্মের বাইরে)
+        if submitted:
+            try:
+                for item in sheet_data:
+                    supabase.table("monthly_attendance_records").upsert({
+                        "month_year": str(full_month), 
+                        "emp_id": int(item['eid']), 
+                        "present_days": int(item['p']),
+                        "absent_days": int(item['a']),
+                        "fine_amount": float(item['f']),
+                        "overtime_hours": float(item['oth']),
+                        "overtime_rate": float(item['otr']),
+                        "bonus_amount": float(item['bonus']),
+                        "advance_cut": float(item['adv'])
+                    }).execute()
+                st.success("সফলভাবে সেভ হয়েছে! 🎉")
+                st.rerun()
+            except Exception as e:
+                st.error(f"❌ ডাটাবেস এরর: {e}")
+    else:
+        st.info("এই ক্যাটাগরিতে কোনো এমপ্লয়ি নেই।")
 with tab3:
             st.subheader("📊 Attendance & Processor")
             
