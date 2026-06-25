@@ -247,6 +247,19 @@ with tab2:
                 except Exception as e:
                     st.error(f"❌ ডাটাবেস এরর: {e}")
 with tab3:
+            st.subheader("📊 Attendance & Processor")
+            
+            # ফর্ম শুরু
+            with st.form("attendance_processor_form"):
+                cat_to_process = st.selectbox("Select Category to Process", 
+                                            ["Officer", "Manager", "Worker (Permanent)", "Worker (Daily Basis)"])
+                
+                # বাটন যোগ করা হয়েছে (এটিই মূল সমাধান)
+                submitted = st.form_submit_button("Process Attendance")
+            
+            # বাটন চাপলে যা হবে
+            if submitted:
+                st.write(f"Processing data for: {cat_to_process}...")
             # --- MAIN SUMMARY SHEET WITH MATCHING ALIGNMENT ---
             print_html = f"""
             <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; padding: 25px; background: white; color: black; border-radius: 12px;">
