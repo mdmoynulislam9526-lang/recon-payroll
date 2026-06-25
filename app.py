@@ -336,17 +336,25 @@ with tab4:
             col_stat1.metric("Total Employees", total_employees)
             col_stat2.metric("Total Base Salary Budget", f"Tk {total_salary_budget:,.2f}")
             
-            df_rows = pd.DataFrame(rows)
-            if not df_rows.empty:
-                cat_summary = df_rows.groupby('category')['salary'].agg(['count', 'sum']).reset_index()
-                cat_summary.columns = ['Category', 'Employee Count', 'Total Salary']
-                st.table(cat_summary)
-                st.bar_chart(cat_summary.set_index('Category')['Total Salary'])
-                print_html += "</tbody></table></div>"
-            print_html += "</div>"
-            if has_any_data:
-                st.components.v1.html(print_html, height=600, scrolling=True)
-                if st.button("🖨️ CLICK HERE TO PRINT THIS FULL SHEET", use_container_width=True, type="primary"):
-                    st.components.v1.html(f"{print_html}<script>window.print();</script>", height=0)
-            else:
-                st.info("No records loaded yet.")
+# ... (পূর্বের কোড)
+df_rows = pd.DataFrame(rows)
+if not df_rows.empty:
+    cat_summary = df_rows.groupby('category')['salary'].agg(['count', 'sum']).reset_index()
+    cat_summary.columns = ['Category', 'Employee Count', 'Total Salary']
+    st.table(cat_summary)
+    st.bar_chart(cat_summary.set_index('Category')['Total Salary'])
+    
+    # এখানে ভেরিয়েবলটি আগে তৈরি করে নিন (এই লাইনটি যোগ করুন)
+    print_html = "<div><table><tbody>" 
+    
+    # এখন আপনার দেওয়া লাইনগুলো কাজ করবে
+    print_html += "</tbody></table></div>"
+    print_html += "</div>"
+    
+    # has_any_data এর জায়গায় True ব্যবহার করুন কারণ ডেটা আছে
+    if True: 
+        st.components.v1.html(print_html, height=600, scrolling=True)
+        if st.button("🖨️ CLICK HERE TO PRINT THIS FULL SHEET", use_container_width=True, type="primary"):
+            st.components.v1.html(f"{print_html}<script>window.print();</script>", height=0)
+else:
+    st.info("No records loaded yet.")
