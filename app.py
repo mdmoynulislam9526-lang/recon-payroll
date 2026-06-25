@@ -70,19 +70,20 @@ def render_inline_management(r, prefix=""):
         with col_act1:
             if st.button("Edit 📝", key=f"{prefix}_edit_{eid}"): st.session_state[f"emode_{prefix}_{eid}"] = True
         with col_act2:
-# এই অংশটুকু পরিবর্তন করুন:
-if st.button("Delete ❌", key=f"{prefix}_del_{eid}", type="secondary"):
-    supabase.table("employees_final_version").delete().eq("emp_id", eid).execute()
-    supabase.table("monthly_attendance_records").delete().eq("emp_id", eid).execute()
-    st.rerun()
+            if st.button("Delete ❌", key=f"{prefix}_del_{eid}", type="secondary"):
+                # Supabase Delete
+                supabase.table("employees_final_version").delete().eq("emp_id", eid).execute()
+                supabase.table("monthly_attendance_records").delete().eq("emp_id", eid).execute()
+                st.rerun()
         if st.session_state.get(f"emode_{prefix}_{eid}", False):
             with st.form(key=f"form_{prefix}_{eid}"):
                 ch_name = st.text_input("Name", value=ename)
                 ch_salary = st.text_input("Salary", value=str(esalary))
-if st.form_submit_button("Save"):
-    supabase.table("employees_final_version").update({"name": ch_name, "salary": float(ch_salary)}).eq("emp_id", eid).execute()
-    st.session_state[f"emode_{prefix}_{eid}"] = False
-    st.rerun()
+                if st.form_submit_button("Save"):
+                    # Supabase Update
+                    supabase.table("employees_final_version").update({"name": ch_name, "salary": float(ch_salary)}).eq("emp_id", eid).execute()
+                    st.session_state[f"emode_{prefix}_{eid}"] = False
+                    st.rerun()
 
 with col2:
     response = supabase.table("employees_final_version").select("*").execute()
