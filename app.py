@@ -184,7 +184,7 @@ with col2:
         with tab_emp:
             categories_map = {"💼 Managers": "Manager", "👔 Officers": "Officer", "🛠️ Workers (Permanent)": "Worker (Permanent)", "📆 Workers (Daily Basis)": "Worker (Daily Basis)"}
             for title, cat_value in categories_map.items():
-                cat_members = [r for r in rows if r[3] == cat_value]
+                cat_members = [r for r in rows if r.get('category') == cat_value]
                 with st.expander(f"{title} ({len(cat_members)})", expanded=False):
                     if not cat_members: st.info("No records.")
                     else:
