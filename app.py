@@ -368,18 +368,18 @@ with tab2:
                             st.error(f"❌ Action Denied! Please check the permission box above.")
                         else:
                             # Supabase Upsert কোড
-                            for item in sheet_data:
-supabase.table("monthly_attendance_records").upsert({
-    "month_year": full_month,
-    "emp_id": item['eid'],
-    "present_days": item['p'],
-    "absent_days": item['a'],
-    "fine_amount": item['f'],
-    "overtime_hours": item['oth'],
-    "overtime_rate": item['otr'],
-    "bonus_amount": item['bonus'],
-    "advance_cut": item['adv']
-}).execute()
+for item in sheet_data:
+    supabase.table("monthly_attendance_records").upsert({
+        "month_year": full_month,
+        "emp_id": item['eid'],
+        "present_days": item['p'],
+        "absent_days": item['a'],
+        "fine_amount": item['f'],
+        "overtime_hours": item['oth'],
+        "overtime_rate": item['otr'],
+        "bonus_amount": item['bonus'],
+        "advance_cut": item['adv']
+    }).execute()
                             st.success(f"✅ Successfully saved records for {full_month}!")
                             st.rerun()
             st.markdown("---")
