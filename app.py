@@ -390,8 +390,8 @@ print_html += f"""
                                 <td style="border: 1px solid #dee2e6; padding: 8px; text-align: right; font-weight: 700; color: #1F4E78; background-color: #f8f9fa; font-size: 13px;">{final_payable:,.2f}</td>
                             </tr>
                     """
-                print_html += "</tbody></table></div>"
-                print_html += "</div>"
+print_html += "</tbody></table></div>"
+print_html += "</div>"
 if rows: 
     # ব্লকের ভেতরের কোড (৪ স্পেস ডানে)
     if has_any_data:
