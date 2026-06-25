@@ -249,15 +249,15 @@ with tab2:
 with tab3:
             st.subheader("📊 Attendance & Processor")
             
-            # ফর্ম শুরু
+            # ফর্মটি সঠিকভাবে শুরু করুন
             with st.form("attendance_processor_form"):
                 cat_to_process = st.selectbox("Select Category to Process", 
                                             ["Officer", "Manager", "Worker (Permanent)", "Worker (Daily Basis)"])
                 
-                # সাবমিট বাটন
+                # বাটন যোগ করা হয়েছে (এটিই মূল সমাধান)
                 submitted = st.form_submit_button("Process Attendance")
             
-            # বাটন চাপা হলে প্রসেসিং শুরু
+            # বাটন চাপলে যা হবে
             if submitted:
                 st.write(f"Processing data for: {cat_to_process}...")
                 
@@ -312,7 +312,8 @@ with tab3:
                     
                     for r in cat_rows:
                         eid, name, cat, dept, base_sal = r['emp_id'], r['name'], r['category'], r['department'], r['salary']
-                        # ডাটাবেসের সঠিক কলাম নাম ব্যবহার করা হয়েছে
+                        
+                        # ডাটাবেসের সঠিক কলাম নাম ব্যবহার করা হয়েছে (KeyError দূর করতে)
                         rec = saved_db_tracker.get(str(eid), {"present_days": 26, "absent_days": 0, "fine_amount": 0.0, "overtime_hours": 0.0, "overtime_rate": 0.0, "bonus_amount": 0.0, "advance_cut": 0.0})
                         
                         gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(
@@ -344,7 +345,7 @@ with tab3:
                 st.components.v1.html(print_html, height=800, scrolling=True)
             
             else:
-                # বাটন না চাপা হলে এই তথ্যটি দেখাবে
+                # বাটন না চাপা হলে ডিফল্ট তথ্য
                 st.info("Please select a category and click 'Process Attendance' to start.")
 # --- NEW TAB: DASHBOARD SUMMARY ---
 with tab4:
