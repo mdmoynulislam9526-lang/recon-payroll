@@ -115,15 +115,15 @@ with col2:
         db_records = response.data
         
         # ডাটা ডিকশনারি ফরম্যাটে ট্র্যাকার তৈরি করা হচ্ছে
-        rec = saved_db_tracker.get(str(selected_id), {
-                "present_days": 26, 
-                "absent_days": 0, 
-                "fine_amount": 0.0, 
-                "overtime_hours": 0.0, 
-                "overtime_rate": 0.0, 
-                "bonus_amount": 0.0, 
-                "advance_cut": 0.0
-            })
+rec = saved_db_tracker.get(str(selected_id), {
+    "present_days": 26, 
+    "absent_days": 0, 
+    "fine_amount": 0.0, 
+    "overtime_hours": 0.0, 
+    "overtime_rate": 0.0, 
+    "bonus_amount": 0.0, 
+    "advance_cut": 0.0
+})
 
         total_payout = 0.0
         total_bonus = 0.0
