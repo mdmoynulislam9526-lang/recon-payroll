@@ -249,86 +249,79 @@ with tab2:
 with tab3:
             st.subheader("📊 Attendance & Processor")
             
-            # ফর্মটি সঠিকভাবে শুরু করুন
+            # ফর্ম শুরু
             with st.form("attendance_processor_form"):
                 cat_to_process = st.selectbox("Select Category to Process", 
                                             ["Officer", "Manager", "Worker (Permanent)", "Worker (Daily Basis)"])
                 
-                # সাবমিট বাটন যোগ করুন (এটি ছাড়া ফর্ম কাজ করবে না)
+                # সাবমিট বাটন
                 submitted = st.form_submit_button("Process Attendance")
             
-# বাটন চাপলে যা হবে
+            # বাটন চাপা হলে প্রসেসিং শুরু
             if submitted:
                 st.write(f"Processing data for: {cat_to_process}...")
-            # --- MAIN SUMMARY SHEET WITH MATCHING ALIGNMENT ---
-            print_html = f"""
-            <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; padding: 25px; background: white; color: black; border-radius: 12px;">
-                <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #1F4E78;">
-                    {"<div style='margin-bottom: 5px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 70px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if logo_base64_str else ""}
-                </div>
                 
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; width: 100%;">
-                    <div style="width: 20%;"></div>
-                    <div style="width: 60%; text-align: center;">
-                        <span style="font-size: 17px; color: #1F4E78; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;">Employee Monthly Payroll Statement Sheet</span>
+                # --- MAIN SUMMARY SHEET ---
+                print_html = f"""
+                <div style="font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; padding: 25px; background: white; color: black; border-radius: 12px;">
+                    <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #1F4E78;">
+                        {"<div style='margin-bottom: 5px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 70px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if 'logo_base64_str' in locals() else ""}
                     </div>
-                    <div style="width: 20%; text-align: right;">
-                        <span style="font-size: 13px; color: #555; font-weight: 600; background-color: #f8f9fa; padding: 4px 10px; border-radius: 6px; border: 1px solid #e9ecef;">Period: {full_month}</span>
-                    </div>
-                </div>
-            """
-
-            categories_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
-            display_titles = ["💼 Managers Summary", "👔 Officers Summary", "🛠️ Workers (Permanent) Summary", "📆 Workers (Daily Basis) Summary"]
-            
-            has_any_data = False
-            for cat_name, title_text in zip(categories_list, display_titles):
-                cat_rows = [r for r in rows if r['category'] == cat_name]
-                if not cat_rows: continue
-                
-                has_any_data = True
-                print_html += f"""
-                <h3 style="color: #1F4E78; border-left: 5px solid #1F4E78; padding-left: 10px; margin-top: 30px; margin-bottom: 12px; font-size: 16px; font-weight: 700;">{title_text}</h3>
-                <div style="overflow-x: auto; max-width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.02); border-radius: 6px;">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 20px; background: white; min-width: 1150px;">
-                        <thead>
-                            <tr style="background-color: #1F4E78; color: white; text-align: center; font-weight: 600;">
-                                <th style="border: 1px solid #dee2e6; padding: 8px;">ID</th>
-                                <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left; width: 15%;">Employee Name</th>
-                                <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left;">Department</th>
-                                <th style="border: 1px solid #dee2e6; padding: 8px;">Base Pay</th>
-                                <th style="border: 1px solid #dee2e6; padding: 8px;">H.Rent</th>
-                                <th style="border: 1px solid #dee2e6; padding: 8px;">Medical</th>
-                                <th style="border: 1px solid #dee2e6; padding: 8px;">P/A Days</th>
-                                <th style="border: 1px solid #dee2e6; padding: 8px; color: #ffbcbc;">Abs Cut</th>
-                                <th style="border: 1px solid #dee2e6; padding: 8px; color: #ffbcbc;">Fine</th>
-                                <th style="border: 1px solid #dee2e6; padding: 8px; color: #b4ffb4;">OT Earn</th>
-                                <th style="border: 1px solid #dee2e6; padding: 8px; color: #b4ffb4;">Bonus</th>
-                                <th style="border: 1px solid #dee2e6; padding: 8px; color: #ffbcbc;">Adv Cut</th>
-                                <th style="border: 1px solid #dee2e6; padding: 8px; background-color: #163654; font-weight: 700;">Net Payable</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                """
-                
-                for r in cat_rows:
-                    eid, name, cat, dept, base_sal = r['emp_id'], r['name'], r['category'], r['department'], r['salary']
-                    rec = saved_db_tracker.get(str(eid), {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
                     
-gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(
-    base_sal, 
-    rec['absent_days'], 
-    rec['fine_amount'], 
-    cat, 
-    rec['present_days'], 
-    rec['advance_cut']
-)
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; width: 100%;">
+                        <div style="width: 20%;"></div>
+                        <div style="width: 60%; text-align: center;">
+                            <span style="font-size: 17px; color: #1F4E78; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;">Employee Monthly Payroll Statement Sheet</span>
+                        </div>
+                        <div style="width: 20%; text-align: right;">
+                            <span style="font-size: 13px; color: #555; font-weight: 600; background-color: #f8f9fa; padding: 4px 10px; border-radius: 6px; border: 1px solid #e9ecef;">Period: {full_month}</span>
+                        </div>
+                    </div>
+                """
 
-# ওভারটাইম এবং বোনাসের সঠিক কলামের নাম ব্যবহার করা হলো
-ot_total = rec['overtime_hours'] * rec['overtime_rate']
-final_payable = net_p + ot_total + rec['bonus_amount']
+                categories_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
+                display_titles = ["💼 Managers Summary", "👔 Officers Summary", "🛠️ Workers (Permanent) Summary", "📆 Workers (Daily Basis) Summary"]
+                
+                for cat_name, title_text in zip(categories_list, display_titles):
+                    cat_rows = [r for r in rows if r['category'] == cat_name]
+                    if not cat_rows: continue
+                    
+                    print_html += f"""
+                    <h3 style="color: #1F4E78; border-left: 5px solid #1F4E78; padding-left: 10px; margin-top: 30px; margin-bottom: 12px; font-size: 16px; font-weight: 700;">{title_text}</h3>
+                    <div style="overflow-x: auto; max-width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.02); border-radius: 6px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 20px; background: white; min-width: 1150px;">
+                            <thead>
+                                <tr style="background-color: #1F4E78; color: white; text-align: center; font-weight: 600;">
+                                    <th style="border: 1px solid #dee2e6; padding: 8px;">ID</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left; width: 15%;">Employee Name</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left;">Department</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px;">Base Pay</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px;">H.Rent</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px;">Medical</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px;">P/A Days</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px; color: #ffbcbc;">Abs Cut</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px; color: #ffbcbc;">Fine</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px; color: #b4ffb4;">OT Earn</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px; color: #b4ffb4;">Bonus</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px; color: #ffbcbc;">Adv Cut</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px; background-color: #163654; font-weight: 700;">Net Payable</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    """
+                    
+                    for r in cat_rows:
+                        eid, name, cat, dept, base_sal = r['emp_id'], r['name'], r['category'], r['department'], r['salary']
+                        # ডাটাবেসের সঠিক কলাম নাম ব্যবহার করা হয়েছে
+                        rec = saved_db_tracker.get(str(eid), {"present_days": 26, "absent_days": 0, "fine_amount": 0.0, "overtime_hours": 0.0, "overtime_rate": 0.0, "bonus_amount": 0.0, "advance_cut": 0.0})
+                        
+                        gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(
+                            base_sal, rec['absent_days'], rec['fine_amount'], cat, rec['present_days'], rec['advance_cut']
+                        )
+                        ot_total = rec['overtime_hours'] * rec['overtime_rate']
+                        final_payable = net_p + ot_total + rec['bonus_amount']
 
-print_html += f"""
+                        print_html += f"""
                             <tr style="text-align: center; background-color: white; border-bottom: 1px solid #efefef;">
                                 <td style="border: 1px solid #e9ecef; padding: 8px; font-weight: 700; color: #333;">{str(eid)}</td>
                                 <td style="border: 1px solid #e9ecef; padding: 8px; text-align: left; font-weight: 700; color: #1F4E78;">{name}</td>
@@ -343,9 +336,13 @@ print_html += f"""
                                 <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #1e7e34; font-weight: 500;">{rec['bonus_amount']:,.2f}</td>
                                 <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #c00; font-weight: 500;">{adv_paid:,.2f}</td>
                                 <td style="border: 1px solid #dee2e6; padding: 8px; text-align: right; font-weight: 700; color: #1F4E78; background-color: #f8f9fa; font-size: 13px;">{final_payable:,.2f}</td>
-                           </tr>
-                           """               
+                            </tr>
+                        """
+                    print_html += "</tbody></table></div>"
                 
+                print_html += "</div>"
+                st.components.v1.html(print_html, height=800, scrolling=True)
+            
             else:
                 # বাটন না চাপা হলে এই তথ্যটি দেখাবে
                 st.info("Please select a category and click 'Process Attendance' to start.")
