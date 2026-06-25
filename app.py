@@ -345,8 +345,8 @@ print_html += f"""
                                 <td style="border: 1px solid #dee2e6; padding: 8px; text-align: right; font-weight: 700; color: #1F4E78; background-color: #f8f9fa; font-size: 13px;">{final_payable:,.2f}</td>
                            </tr>
                            """
-else:
-     st.info("Please select a category and click 'Process Attendance' to start.")
+            else:
+                st.info("Please select a category and click 'Process Attendance' to start.")
 # --- NEW TAB: DASHBOARD SUMMARY ---
 with tab4:
             st.subheader("📈 Dashboard Summary")
