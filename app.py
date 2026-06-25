@@ -462,7 +462,7 @@ for cat_name, title_text in zip(categories_list, display_titles):
                             </tr>
                     """
                 print_html += "</tbody></table></div>"
-            print_html += "</div>"
+                print_html += "</div>"
 
 # মূল ব্লক (যেকোনো একটি লেভেলে)
 if rows: 
