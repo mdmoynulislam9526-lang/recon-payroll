@@ -125,11 +125,11 @@ rec = saved_db_tracker.get(str(selected_id), {
     "advance_cut": 0.0
 })
 
-        total_payout = 0.0
-        total_bonus = 0.0
-        total_ot = 0.0
-        total_deductions = 0.0
-        total_advance = 0.0
+    total_payout = 0.0
+    total_bonus = 0.0
+    total_ot = 0.0
+    total_deductions = 0.0
+    total_advance = 0.0
 
         for r in rows:
             eid, _, _, cat, _, base_sal = r
