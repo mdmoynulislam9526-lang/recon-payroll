@@ -115,15 +115,22 @@ with col2:
         db_records = response.data
         
         # ডাটা ডিকশনারি ফরম্যাটে ট্র্যাকার তৈরি করা হচ্ছে
-rec = saved_db_tracker.get(str(selected_id), {
-    "present_days": 26, 
-    "absent_days": 0, 
-    "fine_amount": 0.0, 
-    "overtime_hours": 0.0, 
-    "overtime_rate": 0.0, 
-    "bonus_amount": 0.0, 
-    "advance_cut": 0.0
-})
+# Supabase থেকে ডাটা ফেচ করা হচ্ছে
+        response = supabase.table("monthly_attendance_records").select("*").eq("month_year", full_month).execute()
+        db_records = response.data
+        
+        # আপনার কলামের নাম অনুযায়ী ট্র্যাকার তৈরি
+        saved_db_tracker = {
+            str(r['emp_id']): {
+                "present_days": r.get('present_days', 0), 
+                "absent_days": r.get('absent_days', 0), 
+                "fine_amount": r.get('fine_amount', 0), 
+                "overtime_hours": r.get('overtime_hours', 0), 
+                "overtime_rate": r.get('overtime_rate', 0), 
+                "bonus_amount": r.get('bonus_amount', 0), 
+                "advance_cut": r.get('advance_cut', 0)
+            } for r in db_records
+        }
 
     total_payout = 0.0
     total_bonus = 0.0
@@ -133,7 +140,15 @@ rec = saved_db_tracker.get(str(selected_id), {
 
         for r in rows:
             eid, _, _, cat, _, base_sal = r
-            rec = saved_db_tracker.get(str(eid), {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
+rec = saved_db_tracker.get(str(eid), {
+    "present_days": days_in_month if cat == 'Worker (Daily Basis)' else 26, 
+    "absent_days": 0, 
+    "fine_amount": 0.0, 
+    "overtime_hours": 0.0, 
+    "overtime_rate": 0.0, 
+    "bonus_amount": 0.0, 
+    "advance_cut": 0.0
+})
             
             _, _, _, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(
                 base_sal, rec['absent'], rec['fine'], cat, rec['present'], rec['advance']
@@ -347,17 +362,17 @@ with tab2:
                         else:
                             # Supabase Upsert কোড
                             for item in sheet_data:
-                                supabase.table("monthly_attendance_records").upsert({
-                                    "month_year": full_month,
-                                    "emp_id": item['eid'],
-                                    "present": item['p'],
-                                    "absent": item['a'],
-                                    "fine": item['f'],
-                                    "ot_hrs": item['oth'],
-                                    "ot_rate": item['otr'],
-                                    "bonus": item['bonus'],
-                                    "advance": item['adv']
-                                }).execute()
+supabase.table("monthly_attendance_records").upsert({
+    "month_year": full_month,
+    "emp_id": item['eid'],
+    "present_days": item['p'],
+    "absent_days": item['a'],
+    "fine_amount": item['f'],
+    "overtime_hours": item['oth'],
+    "overtime_rate": item['otr'],
+    "bonus_amount": item['bonus'],
+    "advance_cut": item['adv']
+}).execute()
                             st.success(f"✅ Successfully saved records for {full_month}!")
                             st.rerun()
             st.markdown("---")
