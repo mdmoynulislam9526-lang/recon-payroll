@@ -328,25 +328,53 @@ with tab3:
                 st.info("Please select a category and click 'Process Attendance' to start.")
 # --- NEW TAB: DASHBOARD SUMMARY ---
 with tab4:
-    st.subheader("📈 Dashboard Summary")
+    st.subheader("📑 Summary Sheet")
     
-    if 'rows' in locals() and rows:  # rows আছে কি না নিশ্চিত করা
-        total_employees = len(rows)
-        total_salary_budget = sum([r['salary'] for r in rows])
+    if rows:
+        # টেবিল তৈরির জন্য HTML শুরু
+        print_html = """
+        <div style="font-family: Arial, sans-serif; padding: 15px;">
+            <h2 style="color: #1F4E78;">Employee Monthly Summary</h2>
+            <table border='1' style='width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;'>
+                <thead>
+                    <tr style="background-color: #f2f2f2;">
+                        <th>ID</th><th>Name</th><th>Category</th><th>Net Payable</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
         
-        col_stat1, col_stat2 = st.columns(2)
-        col_stat1.metric("Total Employees", total_employees)
-        col_stat2.metric("Total Base Salary Budget", f"Tk {total_salary_budget:,.2f}")
-        
-        df_rows = pd.DataFrame(rows)
-        if not df_rows.empty:
-            cat_summary = df_rows.groupby('category')['salary'].agg(['count', 'sum']).reset_index()
-            cat_summary.columns = ['Category', 'Employee Count', 'Total Salary']
+        # ক্যালকুলেশন লজিক এবং টেবিল রো তৈরি
+        for r in rows:
+            # ডাটাবেস থেকে ট্র্যাকার ডাটা সংগ্রহ
+            rec = saved_db_tracker.get(str(r['emp_id']), {
+                "present_days": 26, "absent_days": 0, "fine_amount": 0.0, 
+                "overtime_hours": 0.0, "overtime_rate": 0.0, "bonus_amount": 0.0, "advance_cut": 0.0
+            })
             
-            st.table(cat_summary)
-            st.bar_chart(cat_summary.set_index('Category')['Total Salary'])
+            # ক্যালকুলেশন ফাংশন কল করা
+            gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(
+                r['salary'], 
+                rec['absent_days'], 
+                rec['fine_amount'], 
+                r['category'], 
+                rec['present_days'], 
+                rec['advance_cut']
+            )
+            
+            # চূড়ান্ত হিসাব
+            final_payable = net_p + (rec['overtime_hours'] * rec['overtime_rate']) + rec['bonus_amount']
+            
+            # টেবিলের রো যোগ করা
+            print_html += f"<tr><td>{r['emp_id']}</td><td>{r['name']}</td><td>{r['category']}</td><td>{final_payable:,.2f}</td></tr>"
         
-        # প্রিন্ট বাটনটি এখানে শুধু যদি ডেটা থাকে তবেই দেখাবে
-        st.info("📊 সারাংশ উপরে দেওয়া হলো।")
+        print_html += "</tbody></table></div>"
+        
+        # HTML ডিসপ্লে করা
+        st.components.v1.html(print_html, height=500, scrolling=True)
+        
+        # প্রিন্ট বাটন
+        if st.button("🖨️ Print Full Sheet"):
+            st.components.v1.html(f"<script>window.print();</script>{print_html}", height=0)
     else:
         st.info("No records loaded yet.")
