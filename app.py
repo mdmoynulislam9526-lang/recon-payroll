@@ -249,15 +249,15 @@ with tab2:
 with tab3:
             st.subheader("📊 Attendance & Processor")
             
-            # ফর্মটি সঠিকভাবে শুরু করুন
+            # Form starts here
             with st.form("attendance_processor_form"):
                 cat_to_process = st.selectbox("Select Category to Process", 
                                             ["Officer", "Manager", "Worker (Permanent)", "Worker (Daily Basis)"])
                 
-                # বাটনটি ফর্মের ভেতরে ৪টি স্পেস ডানে থাকতে হবে
+                # Submit button (Form এর ভেতরে)
                 submitted = st.form_submit_button("Process Attendance")
             
-            # বাটন চাপলে যা হবে
+            # Logic starts here (Form এর বাইরে, কিন্তু ট্যাব এর ভেতরে)
             if submitted:
                 st.write(f"Processing data for: {cat_to_process}...")
                 
@@ -267,16 +267,7 @@ with tab3:
                     <div style="text-align: center; margin-bottom: 25px; padding-bottom: 15px; border-bottom: 3px solid #1F4E78;">
                         {"<div style='margin-bottom: 5px; display: block;'><img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 70px; width: auto; object-fit: contain; display: inline-block;' alt='RECON Logo'></div>" if 'logo_base64_str' in locals() else ""}
                     </div>
-                    
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; width: 100%;">
-                        <div style="width: 20%;"></div>
-                        <div style="width: 60%; text-align: center;">
-                            <span style="font-size: 17px; color: #1F4E78; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;">Employee Monthly Payroll Statement Sheet</span>
-                        </div>
-                        <div style="width: 20%; text-align: right;">
-                            <span style="font-size: 13px; color: #555; font-weight: 600; background-color: #f8f9fa; padding: 4px 10px; border-radius: 6px; border: 1px solid #e9ecef;">Period: {full_month}</span>
-                        </div>
-                    </div>
+                    <div style="text-align: center; font-weight: 700; color: #1F4E78; margin-bottom: 20px;">Employee Monthly Payroll Statement Sheet</div>
                 """
 
                 categories_list = ["Manager", "Officer", "Worker (Permanent)", "Worker (Daily Basis)"]
@@ -293,49 +284,28 @@ with tab3:
                             <thead>
                                 <tr style="background-color: #1F4E78; color: white; text-align: center; font-weight: 600;">
                                     <th style="border: 1px solid #dee2e6; padding: 8px;">ID</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left; width: 15%;">Employee Name</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left;">Department</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px;">Base Pay</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px;">H.Rent</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px;">Medical</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px;">P/A Days</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px; color: #ffbcbc;">Abs Cut</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px; color: #ffbcbc;">Fine</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px; color: #b4ffb4;">OT Earn</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px; color: #b4ffb4;">Bonus</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px; color: #ffbcbc;">Adv Cut</th>
-                                    <th style="border: 1px solid #dee2e6; padding: 8px; background-color: #163654; font-weight: 700;">Net Payable</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px; text-align: left;">Name</th>
+                                    <th style="border: 1px solid #dee2e6; padding: 8px;">Net Payable</th>
                                 </tr>
                             </thead>
                             <tbody>
                     """
                     
                     for r in cat_rows:
-                        eid, name, cat, dept, base_sal = r['emp_id'], r['name'], r['category'], r['department'], r['salary']
-                        
+                        eid, name = r['emp_id'], r['name']
+                        # Data check
                         rec = saved_db_tracker.get(str(eid), {"present_days": 26, "absent_days": 0, "fine_amount": 0.0, "overtime_hours": 0.0, "overtime_rate": 0.0, "bonus_amount": 0.0, "advance_cut": 0.0})
                         
                         gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(
-                            base_sal, rec['absent_days'], rec['fine_amount'], cat, rec['present_days'], rec['advance_cut']
+                            r['salary'], rec['absent_days'], rec['fine_amount'], cat_name, rec['present_days'], rec['advance_cut']
                         )
-                        ot_total = rec['overtime_hours'] * rec['overtime_rate']
-                        final_payable = net_p + ot_total + rec['bonus_amount']
+                        final_payable = net_p + (rec['overtime_hours'] * rec['overtime_rate']) + rec['bonus_amount']
 
                         print_html += f"""
-                            <tr style="text-align: center; background-color: white; border-bottom: 1px solid #efefef;">
-                                <td style="border: 1px solid #e9ecef; padding: 8px; font-weight: 700; color: #333;">{str(eid)}</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: left; font-weight: 700; color: #1F4E78;">{name}</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: left; color: #555;">{dept}</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; font-weight: 500;">{gross:,.2f}</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #666;">{house_rent:,.2f}</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #666;">{medical:,.2f}</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px; font-weight: 500; color: #495057;">{rec['present_days']}P / {rec['absent_days']}A</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #c00; font-weight: 500;">{ab_cut:,.2f}</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #c00; font-weight: 500;">{rec['fine_amount']:,.2f}</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #1e7e34; font-weight: 500;">{ot_total:,.2f}</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #1e7e34; font-weight: 500;">{rec['bonus_amount']:,.2f}</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #c00; font-weight: 500;">{adv_paid:,.2f}</td>
-                                <td style="border: 1px solid #dee2e6; padding: 8px; text-align: right; font-weight: 700; color: #1F4E78; background-color: #f8f9fa; font-size: 13px;">{final_payable:,.2f}</td>
+                            <tr>
+                                <td style="border: 1px solid #e9ecef; padding: 8px;">{eid}</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px;">{name}</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px;">{final_payable:,.2f}</td>
                             </tr>
                         """
                     print_html += "</tbody></table></div>"
@@ -345,7 +315,6 @@ with tab3:
             
             else:
                 st.info("Please select a category and click 'Process Attendance' to start.")
-            
 # --- NEW TAB: DASHBOARD SUMMARY ---
 with tab4:
             st.subheader("📈 Dashboard Summary")
