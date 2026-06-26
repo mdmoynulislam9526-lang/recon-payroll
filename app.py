@@ -367,7 +367,15 @@ for cat_name, title_text in zip(categories_list, display_titles):
                     rec = saved_db_tracker.get(str(eid), {"present": days_in_month if cat == 'Worker (Daily Basis)' else 26, "absent": 0, "fine": 0.0, "ot_hrs": 0.0, "ot_rate": 0.0, "bonus": 0.0, "advance": 0.0})
                     
 gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(
-base_sal, rec['absent_days'], rec['fine'], cat, rec['present_days'], rec['advance_cut']
+rec = {
+    'present_days': some_value,
+    'absent_days': some_value,
+    'fine': some_value,
+    'advance_cut': some_value,
+    'ot_hrs': some_value,
+    'ot_rate': some_value,
+    'bonus': some_value
+}
 )
 
 ot_total = rec['ot_hrs'] * rec['ot_rate']
