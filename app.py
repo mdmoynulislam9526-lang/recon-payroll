@@ -368,13 +368,13 @@ for cat_name, title_text in zip(categories_list, display_titles):
                     
 gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(
 rec = {
-    'present_days': some_value,
-    'absent_days': some_value,
-    'fine': some_value,
-    'advance_cut': some_value,
-    'ot_hrs': some_value,
-    'ot_rate': some_value,
-    'bonus': some_value
+    'present_days': 26,  # 'some_value' এর বদলে সংখ্যা দিন
+    'absent_days': 0,
+    'fine': 0.0,
+    'advance_cut': 0.0,
+    'ot_hrs': 0.0,
+    'ot_rate': 0.0,
+    'bonus': 0.0
 }
 )
 
