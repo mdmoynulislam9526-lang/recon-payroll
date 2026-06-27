@@ -240,7 +240,7 @@ if not sig_base64_str and not seal_base64_str:
    sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[Images Not Found]</div>"
 
                     # HTML PAYSLIP PREVIEW
-                    payslip_preview_html = f"""
+payslip_preview_html = f"""
                     <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 35px; background: white; color: black; border: 1px solid #c8d6e5; border-radius: 8px; max-width: 700px; margin: 15px auto; box-shadow: 0 4px 20px rgba(0,0,0,0.06);">
                         <div style="text-align: center; margin-bottom: 25px; border-bottom: 3px solid #1F4E78;">
                             {"<img src='data:image/png;base64," + logo_base64_str + "' style='max-height: 65px;' alt='Logo'>" if logo_base64_str else ""}
