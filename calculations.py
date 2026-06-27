@@ -7,8 +7,15 @@ from reportlab.lib import colors
 
 def calculate_salary_breakdown(base_salary, absent_days, fine_amount, category, present_days, advanced_payment=0.0):
     """
-    বেতন, হাউজ রেন্ট, মেডিকেল এবং অ্যাডভান্সড পেমেন্ট হিসাব করার মূল লজিক
+    ডেটা টাইপ কনভার্সন সহ সংশোধিত স্যালারি ব্রেকডাউন
     """
+    # টাইপ কাস্টিং (নিশ্চিত করা যেন সব ভ্যালু নাম্বার হয়)
+    base_salary = float(base_salary)
+    absent_days = float(absent_days)
+    fine_amount = float(fine_amount)
+    present_days = float(present_days)
+    advanced_payment = float(advanced_payment)
+
     if category == 'Worker (Daily Basis)':
         gross_salary = base_salary * present_days
         absent_cut = 0.0
@@ -21,11 +28,10 @@ def calculate_salary_breakdown(base_salary, absent_days, fine_amount, category, 
         else:
             absent_cut = 0.0
         
-        # মূল বেতনের ৩০% হাউজ রেন্ট এবং ১০% মেডিকেল
+        # এখন আর এরর হবে না কারণ base_salary এখন নিশ্চিত float
         house_rent = base_salary * 0.30
         medical_allowance = base_salary * 0.10
 
-    # ফাইনাল পেঅ্যাবল = গ্রস - এবসেন্ট - ফাইন - অগ্রিম বা অ্যাডভান্সড
     net_payable = gross_salary - absent_cut - fine_amount - advanced_payment
     return gross_salary, house_rent, medical_allowance, 0.0, absent_cut, net_payable, advanced_payment
 
