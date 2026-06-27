@@ -226,8 +226,8 @@ gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakd
     float(rec['advance_cut'])
 )
                     
-                    total_ot_emp = rec['ot_hrs'] * rec['ot_rate']
-                    net_final = net_p + total_ot_emp + rec['bonus']
+total_ot_emp = rec['ot_hrs'] * rec['ot_rate']
+net_final = net_p + total_ot_emp + rec['bonus']
                     
                     # SIGNATURE & SEAL LOGIC
                     sig_html_element = ""
