@@ -307,7 +307,7 @@ with tab2:
                             st.error(f"❌ Action Denied! Please check the permission box above.")
                         else:
                             for item in sheet_data:
- supabase.table("monthly_attendance_records").upsert({
+    supabase.table("monthly_attendance_records").upsert({
     "month_year": full_month,
     "emp_id": item['eid'],
     "present_days": item['p'],
