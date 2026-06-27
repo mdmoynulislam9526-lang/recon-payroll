@@ -217,9 +217,14 @@ with tab1:
                     
                     st.success(f"Selected: {selected_emp['name']} ({selected_emp['emp_id']})")
                     
-                    gross, house_rent, medical, _, absent_cut, net_p, adv_paid = calculate_salary_breakdown(
-                        selected_emp['salary'], rec['absent'], rec['fine'], selected_emp['category'], rec['present'], rec['advance']
-                    )
+gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(
+    float(selected_emp['salary']), 
+    float(rec['absent_days']), 
+    float(rec['fine']), 
+    selected_emp['category'], 
+    float(rec['present_days']), 
+    float(rec['advance_cut'])
+)
                     
                     total_ot_emp = rec['ot_hrs'] * rec['ot_rate']
                     net_final = net_p + total_ot_emp + rec['bonus']
@@ -302,13 +307,17 @@ with tab2:
                             st.error(f"❌ Action Denied! Please check the permission box above.")
                         else:
                             for item in sheet_data:
-                                supabase.table("monthly_attendance_records").upsert({
-                                    "month_year": full_month, "emp_id": item['eid'], "present_days": item['p'],
-                                    "absent_days": item['a'], "fine_amount": item['f'], "overtime_hours": item['oth'],
-                                    "overtime_rate": item['otr'], "bonus_amount": item['bonus'], "advance_cut": item['adv']
-                                }).execute()
-                            st.success(f"✅ Successfully saved records for {full_month}!")
-                            st.rerun()
+supabase.table("monthly_attendance_records").upsert({
+    "month_year": full_month,
+    "emp_id": item['eid'],
+    "present_days": item['p'],
+    "absent_days": item['a'],
+    "fine_amount": item['f'],
+    "overtime_hours": item['oth'],
+    "overtime_rate": item['otr'],
+    "bonus_amount": item['bonus'],
+    "advance_cut": item['adv']
+}).execute()
 
 st.markdown("---")
 st.markdown("### 🖨️ Print Preview Panel (Live Database Sheet)")
