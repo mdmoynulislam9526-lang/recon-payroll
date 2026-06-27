@@ -231,13 +231,13 @@ net_final = net_p + total_ot_emp + rec['bonus']
                     
                     # SIGNATURE & SEAL LOGIC
 sig_html_element = ""
-                    if seal_base64_str:
-                        sig_html_element += f"<img src='data:image/png;base64,{seal_base64_str}' style='max-height: 75px; width: auto; display: block; margin: 0 auto -45px auto; z-index: 8; position: relative; opacity: 0.85;' alt='Seal'>"
-                    if sig_base64_str:
-                        sig_html_element += f"<img src='data:image/png;base64,{sig_base64_str}' style='max-height: 60px; width: auto; display: block; margin: 0 auto -25px auto; z-index: 12; position: relative;' alt='Signature'>"
+if seal_base64_str:
+sig_html_element += f"<img src='data:image/png;base64,{seal_base64_str}' style='max-height: 75px; width: auto; display: block; margin: 0 auto -45px auto; z-index: 8; position: relative; opacity: 0.85;' alt='Seal'>"
+if sig_base64_str:
+sig_html_element += f"<img src='data:image/png;base64,{sig_base64_str}' style='max-height: 60px; width: auto; display: block; margin: 0 auto -25px auto; z-index: 12; position: relative;' alt='Signature'>"
                     
-                    if not sig_base64_str and not seal_base64_str:
-                        sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[Images Not Found]</div>"
+if not sig_base64_str and not seal_base64_str:
+sig_html_element = "<div style='height: 57px; color:#aaa; font-size:11px; padding-top:20px;'>[Images Not Found]</div>"
 
                     # HTML PAYSLIP PREVIEW
                     payslip_preview_html = f"""
