@@ -261,7 +261,7 @@ payslip_preview_html = f"""
                         <div style="margin-top:40px; text-align:right;">{sig_html_element}<p>Authorized Signature</p></div>
                     </div>
                     """
-                    st.components.v1.html(payslip_preview_html, height=550, scrolling=True)
+st.components.v1.html(payslip_preview_html, height=550, scrolling=True)
                     
                     # DOWNLOAD PDF
                     pdf_emp_data = (selected_emp['emp_id'], selected_emp['name'], selected_emp['designation'], selected_emp['category'], selected_emp['department'], house_rent, medical, adv_paid, net_final)
