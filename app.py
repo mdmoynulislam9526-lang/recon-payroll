@@ -339,7 +339,7 @@ gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakd
 )
 
 total_ot_emp = rec["overtime_rate"] * rec["overtime_rate"]
-net_final = net_p + total_ot_emp + rec["bonus"]
+net_final = net_p + total_ot_emp + rec["bonus_amount"]
 
 # SIGNATURE & SEAL LOGIC
 sig_html_element = ""
