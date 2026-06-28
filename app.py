@@ -332,7 +332,7 @@ with tab1:
 gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(
     float(selected_emp["salary"]),
     float(rec["absent_days"]),
-    float(rec["fine"]),
+    float(rec["fine_amount"]),
     selected_emp["category"],
     float(rec["present_days"]),
     float(rec["advance_cut"]),
