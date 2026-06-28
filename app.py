@@ -618,12 +618,12 @@ rec = {
     "bonus": 0.0,
 }
 gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(
-    base_sal,
-    rec["absent_days"],
-    rec["fine"],
-    cat,
-    rec["present_days"],
-    rec["advance_cut"],
+    float(base_sal), 
+    float(rec.get("absent_days", 0)), 
+    float(rec.get("fine", 0)), 
+    cat, 
+    float(rec.get("present_days", 0)), 
+    float(rec.get("advance_cut", 0))
 )
 
 ot_total = rec["ot_hrs"] * rec["ot_rate"]
