@@ -315,15 +315,15 @@ with tab1:
             rec = saved_db_tracker.get(
                 str(selected_emp["emp_id"]),
                 {
-                    "present": days_in_month
+                    "present_days": days_in_month
                     if selected_emp["category"] == "Worker (Daily Basis)"
                     else 26,
-                    "absent": 0,
-                    "fine": 0.0,
+                    "absent_days": 0,
+                    "fine_amount": 0.0,
                     "ot_hrs": 0.0,
                     "ot_rate": 0.0,
-                    "bonus": 0.0,
-                    "advance": 0.0,
+                    "bonus_amount": 0.0,
+                    "advance_cut": 0.0,
                 },
             )
 
@@ -366,8 +366,8 @@ payslip_preview_html = f"""
                             <tr style="background:#f4f4f4;"><th>Description</th><th>Amount</th></tr>
                             <tr><td>Base Pay</td><td>{gross:,.2f}</td></tr>
                             <tr><td>OT Amount</td><td>{total_ot_emp:,.2f}</td></tr>
-                            <tr><td>Bonus</td><td>{rec['bonus']:,.2f}</td></tr>
-                            <tr style="color:red;"><td>Total Deductions</td><td>{(absent_cut + rec['fine'] + adv_paid):,.2f}</td></tr>
+                            <tr><td>Bonus</td><td>{rec['bonus_amount']:,.2f}</td></tr>
+                            <tr style="color:red;"><td>Total Deductions</td><td>{(absent_cut + rec['fine_amount'] + adv_paid):,.2f}</td></tr>
                             <tr style="font-weight:bold; border-top:2px solid #000;"><td>Net Payable</td><td>{net_final:,.2f}</td></tr>
                         </table>
                         <div style="margin-top:40px; text-align:right;">{sig_html_element}<p>Authorized Signature</p></div>
@@ -389,7 +389,7 @@ pdf_emp_data = (
 )
 pdf_buf = BytesIO()
 generate_pdf_bytes(
-    pdf_emp_data, full_month, rec["absent"], rec["fine"], rec["present"], pdf_buf
+    pdf_emp_data, full_month, rec["absent_days"], rec["fine_amount"], rec["present_days"], pdf_buf
 )
 st.download_button(
     "📥 Download Pay Slip (PDF)",
@@ -415,15 +415,15 @@ with tab2:
                 rec = saved_db_tracker.get(
                     str(r["emp_id"]),
                     {
-                        "present": days_in_month
+                        "present_days": days_in_month
                         if r["category"] == "Worker (Daily Basis)"
                         else 26,
-                        "absent": 0,
-                        "fine": 0.0,
+                        "absent_days": 0,
+                        "fine_amount": 0.0,
                         "ot_hrs": 0.0,
                         "ot_rate": 0.0,
-                        "bonus": 0.0,
-                        "advance": 0.0,
+                        "bonus_amount": 0.0,
+                        "advance_cut": 0.0,
                     },
                 )
 
