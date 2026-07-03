@@ -330,7 +330,7 @@ with tab1:
             st.success(f"Selected: {selected_emp['name']} ({selected_emp['emp_id']})")
 
 gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(
-    float(selected_emp["salary"]),
+    float(selected_emp.get("salary", 0.0)),
     float(rec["absent_days"]),
     float(rec["fine_amount"]),
     selected_emp["category"],
