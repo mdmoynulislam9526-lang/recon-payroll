@@ -430,8 +430,8 @@ with tab2:
                 col_in1, col_in2, col_in3 = st.columns(3)
                 with col_in1:
                     target_val = (
-                        int(rec["present"] + rec["absent"])
-                        if rec["absent"] > 0
+                        int(rec["present_days"] + rec["absent_days"])
+                        if rec["absent_days"] > 0
                         else (
                             days_in_month
                             if r["category"] == "Worker (Daily Basis)"
@@ -449,13 +449,13 @@ with tab2:
                         "Absent Days",
                         0,
                         total_target_days,
-                        int(rec["absent"]),
+                        int(rec["absent_days"]),
                         key=f"a_{r['emp_id']}",
                     )
                     f_d = st.number_input(
                         "Penalty/Fine (Tk)",
                         0.0,
-                        value=float(rec["fine"]),
+                        value=float(rec["fine_amount"]),
                         key=f"f_{r['emp_id']}",
                     )
 
@@ -480,14 +480,14 @@ with tab2:
                         "Bonus Amount (Tk)",
                         0.0,
                         200000.0,
-                        value=float(rec["bonus"]),
+                        value=float(rec["bonus_amount"]),
                         key=f"bn_{r['emp_id']}",
                     )
                     adv_cut = st.number_input(
                         "Advanced Salary Cut (Tk)",
                         0.0,
                         200000.0,
-                        value=float(rec["advance"]),
+                        value=float(rec["advance_amount"]),
                         key=f"adv_{r['emp_id']}",
                     )
 
@@ -598,13 +598,13 @@ for cat_name, title_text in zip(categories_list, display_titles):
         rec = saved_db_tracker.get(
             str(eid),
             {
-                "present": days_in_month if cat == "Worker (Daily Basis)" else 26,
-                "absent": 0,
-                "fine": 0.0,
+                "present_days": days_in_month if cat == "Worker (Daily Basis)" else 26,
+                "absent_days": 0,
+                "fine_amount": 0.0,
                 "ot_hrs": 0.0,
                 "ot_rate": 0.0,
-                "bonus": 0.0,
-                "advance": 0.0,
+                "bonus_amount": 0.0,
+                "advance_cut": 0.0,
             },
         )
 
@@ -627,7 +627,7 @@ gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakd
 )
 
 ot_total = rec["ot_hrs"] * rec["ot_rate"]
-final_payable = net_p + ot_total + rec["bonus"]
+final_payable = net_p + ot_total + rec["bonus_amount"]
 
 print_html += f"""
 <tr style="text-align: center; background-color: white; border-bottom: 1px solid #efefef;">
@@ -637,11 +637,11 @@ print_html += f"""
                                 <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; font-weight: 500;">{base_sal:,.2f}</td>
                                 <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #666;">{house_rent:,.2f}</td>
                                 <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #666;">{medical:,.2f}</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px; font-weight: 500; color: #495057;">{rec['present']}P / {rec['absent']}A</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px; font-weight: 500; color: #495057;">{rec['present_days']}P / {rec['absent_days']}A</td>
                                 <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #c00; font-weight: 500;">{ab_cut:,.2f}</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #c00; font-weight: 500;">{rec['fine']:,.2f}</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #c00; font-weight: 500;">{rec['fine_amount']:,.2f}</td>
                                 <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #1e7e34; font-weight: 500;">{ot_total:,.2f}</td>
-                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #1e7e34; font-weight: 500;">{rec['bonus']:,.2f}</td>
+                                <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #1e7e34; font-weight: 500;">{rec['bonus_amount']:,.2f}</td>
                                 <td style="border: 1px solid #e9ecef; padding: 8px; text-align: right; color: #c00; font-weight: 500;">{adv_paid:,.2f}</td>
                                 <td style="border: 1px solid #dee2e6; padding: 8px; text-align: right; font-weight: 700; color: #1F4E78; background-color: #f8f9fa; font-size: 13px;">{final_payable:,.2f}</td>
                             </tr>
