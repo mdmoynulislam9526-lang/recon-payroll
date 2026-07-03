@@ -34,7 +34,7 @@ sig_html_element = (
 )
 seal_base64_str = "" 
  
- local_seal_path = os.path.join(current_dir, "seal.png")
+local_seal_path = os.path.join(current_dir, "seal.png")
  if os.path.exists(local_seal_path):
      with open(local_seal_path, "rb") as img_file:
          seal_base64_str = base64.b64encode(img_file.read()).decode("utf-8")
