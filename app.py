@@ -32,6 +32,12 @@ sig_html_element = (
     if sig_base64_str
     else "____________________"
 )
+seal_base64_str = "" 
+ 
+ local_seal_path = os.path.join(current_dir, "seal.png")
+ if os.path.exists(local_seal_path):
+     with open(local_seal_path, "rb") as img_file:
+         seal_base64_str = base64.b64encode(img_file.read()).decode("utf-8")
 
 st.title("💼 RECON LABORATORIES LTD - Advanced Payroll Management System")
 st.markdown("---")
