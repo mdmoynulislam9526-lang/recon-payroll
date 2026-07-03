@@ -8,6 +8,7 @@ import re
 import os
 import base64
 from calculations import calculate_salary_breakdown, generate_pdf_bytes
+seal_base64_str = ""
 
 # --- SUPABASE CONFIGURATION ---
 SUPABASE_URL = "https://qoelqzaodnxjfsmsyvhc.supabase.co"
