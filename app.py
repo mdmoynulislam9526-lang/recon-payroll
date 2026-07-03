@@ -317,33 +317,34 @@ with tab1:
             if pay_search.lower() in str(r["emp_id"]).lower()
             or pay_search.lower() in r["name"].lower()
         ]
-        if pay_results:
-            selected_emp = pay_results[0]
-            rec = saved_db_tracker.get(
-                str(selected_emp["emp_id"]),
-                {
-                    "present_days": days_in_month
-                    if selected_emp["category"] == "Worker (Daily Basis)"
-                    else 26,
-                    "absent_days": 0,
-                    "fine_amount": 0.0,
-                    "ot_hrs": 0.0,
-                    "ot_rate": 0.0,
-                    "bonus_amount": 0.0,
-                    "advance_cut": 0.0,
-                },
-            )
+if pay_results:
+        selected_emp = pay_results[0]
+        
+        # rec ডিকশনারিটি নিরাপদভাবে তৈরি করা
+        rec = saved_db_tracker.get(
+            str(selected_emp.get("emp_id", "")),
+            {
+                "present_days": days_in_month if selected_emp.get("category") == "Worker (Daily Basis)" else 26,
+                "absent_days": 0,
+                "fine_amount": 0.0,
+                "overtime_hours": 0.0,
+                "overtime_rate": 0.0,
+                "bonus_amount": 0.0,
+                "advance_cut": 0.0,
+            },
+        )
 
-            st.success(f"Selected: {selected_emp['name']} ({selected_emp['emp_id']})")
+        st.success(f"Selected: {selected_emp.get('name', 'N/A')} ({selected_emp.get('emp_id', 'N/A')})")
 
-gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(
-    float(selected_emp.get("salary", 0.0)),
-    float(rec["absent_days"]),
-    float(rec["fine_amount"]),
-    selected_emp["category"],
-    float(rec["present_days"]),
-    float(rec["advance_cut"]),
-)
+        # ক্যালকুলেশন ফাংশনে ডাটা পাঠানো
+        gross, house_rent, medical, _, ab_cut, net_p, adv_paid = calculate_salary_breakdown(
+            float(selected_emp.get("salary", 0.0)),  # ডাটাবেসের কলামের নাম 'salary'
+            float(rec.get("absent_days", 0)),        # ডাটাবেসের কলামের নাম 'absent_days'
+            float(rec.get("fine_amount", 0.0)),      # ডাটাবেসের কলামের নাম 'fine_amount'
+            selected_emp.get("category", "General"),
+            float(rec.get("present_days", 26)),      # ডাটাবেসের কলামের নাম 'present_days'
+            float(rec.get("advance_cut", 0.0)),
+        )
 
 total_ot_emp = rec["overtime_rate"] * rec["overtime_rate"]
 net_final = net_p + total_ot_emp + rec["bonus_amount"]
